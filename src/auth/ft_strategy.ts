@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-oauth2';
+import { Strategy } from 'passport-42';
 
 @Injectable()
 export class FTStrategy extends PassportStrategy(Strategy, 'ft') {
@@ -19,10 +19,8 @@ export class FTStrategy extends PassportStrategy(Strategy, 'ft') {
     });
   }
 
-  async validate(accessToken: string, refreshToken: string) {
+  async validate(accessToken: string, refreshToken: string, profile: any) {
     try {
-      console.log('accessToken: ', accessToken);
-      console.log('refreshToken: ', refreshToken);
       return accessToken;
     } catch (error) {
       console.log(error);
