@@ -25,7 +25,7 @@ export class FTStrategy extends PassportStrategy(Strategy, 'ft') {
     } catch (error) {
       console.log(`refreshToken : ${refreshToken}`);
       console.log(`profile : ${profile}`);
-      console.log(error);
+      console.log(`error : ${error}`);
     }
   }
 }
