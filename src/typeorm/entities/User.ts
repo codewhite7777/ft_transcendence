@@ -5,38 +5,38 @@ import {
   ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
-} from "typeorm";
-import { Channel } from "./Channel";
-import { Channelinfo } from "./Channelinfo";
-import { Friendlist } from "./Friendlist";
-import { Matchhistory } from "./Matchhistory";
-import { Userblacklist } from "./Userblacklist";
+} from 'typeorm';
+import { Channel } from './Channel';
+import { Channelinfo } from './Channelinfo';
+import { Friendlist } from './Friendlist';
+import { Matchhistory } from './Matchhistory';
+import { Userblacklist } from './Userblacklist';
 
-@Index("User_pkey2", ["id"], { unique: true })
-@Entity("User", { schema: "public" })
+@Index('User_pkey2', ['id'], { unique: true })
+@Entity('User', { schema: 'public' })
 export class User {
-  @PrimaryGeneratedColumn({ type: "integer", name: "id" })
+  @PrimaryGeneratedColumn({ type: 'integer', name: 'id' })
   id: number;
 
-  @Column("character varying", { name: "intraid", length: 50 })
+  @Column('character varying', { name: 'intraid', length: 50 })
   intraid: string;
 
-  @Column("character varying", { name: "avatar", nullable: true, length: 50 })
+  @Column('character varying', { name: 'avatar', nullable: true, length: 100 })
   avatar: string | null;
 
-  @Column("integer", { name: "rating" })
+  @Column('integer', { name: 'rating' })
   rating: number;
 
-  @Column("integer", { name: "wincount", default: () => "0" })
+  @Column('integer', { name: 'wincount', default: () => '0' })
   wincount: number;
 
-  @Column("integer", { name: "losecount", default: () => "0" })
+  @Column('integer', { name: 'losecount', default: () => '0' })
   losecount: number;
 
-  @Column("character varying", { name: "email", length: 50 })
+  @Column('character varying', { name: 'email', length: 50 })
   email: string;
 
-  @Column("boolean", { name: "isotp", default: () => "false" })
+  @Column('boolean', { name: 'isotp', default: () => 'false' })
   isotp: boolean;
 
   @OneToMany(() => Channel, (channel) => channel.owner)

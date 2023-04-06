@@ -8,20 +8,36 @@ export class UserService {
     @Inject('USER_REPOSITORY') private userRepository: Repository<User>,
   ) {}
 
-  async findAll(): Promise<User[]> {
+  async findAllUser(): Promise<User[]> {
     return this.userRepository.find();
   }
 
-  async create(): Promise<User> {
+  async findUser(intraID: string): Promise<User> {
+    return this.userRepository.findOne({ where: { intraid: intraID } });
+  }
+
+  async createUser(
+    intraID: string,
+    email: string,
+    avatarURL: string,
+  ): Promise<User> {
     const user = this.userRepository.create();
-    user.intraid = 'gshim';
+    user.intraid = intraID;
+    user.avatar = avatarURL;
     user.isotp = false;
-    user.email = "fuck";
+    user.email = email;
     user.wincount = 0;
     user.losecount = 0;
     user.rating = 1200;
-    
     console.log(user);
     return this.userRepository.save(user);
+  }
+
+  async deleteUser(intraID: string): Promise<boolean> {
+    const userData = await this.findUser(intraID);
+    if (userData == null) return false;
+    const delResult = await this.userRepository.delete(userData.id);
+    if (delResult.affected == 0) return false;
+    return true;
   }
 }
