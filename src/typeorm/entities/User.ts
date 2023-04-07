@@ -21,7 +21,7 @@ export class User {
   @Column('character varying', { name: 'intraid', length: 50 })
   intraid: string;
 
-  @Column('character varying', { name: 'avatar', nullable: true, length: 100 })
+  @Column('character varying', { name: 'avatar', nullable: true, length: 1000 })
   avatar: string | null;
 
   @Column('integer', { name: 'rating' })
