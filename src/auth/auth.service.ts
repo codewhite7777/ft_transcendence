@@ -3,6 +3,8 @@ import axios from 'axios';
 
 @Injectable()
 export class AuthService {
+  private sessionArr = [];
+
   async getIntraData(accessToken: string): Promise<any> {
     const config = {
       headers: { Authorization: `Bearer ${accessToken}` },

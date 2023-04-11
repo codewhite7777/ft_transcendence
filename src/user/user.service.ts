@@ -1,12 +1,34 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { User } from 'src/typeorm/entities/User';
 import { Repository } from 'typeorm';
+import { v1 as uuid } from 'uuid';
 
 @Injectable()
 export class UserService {
+  private sessionArr: { [key: string]: string }[] = [];
+
   constructor(
     @Inject('USER_REPOSITORY') private userRepository: Repository<User>,
   ) {}
+
+  //세션 키 발급
+  createSession(intraID: string): { [key: string]: string } {
+    const newSession = { key: uuid(), name: intraID };
+    this.sessionArr.push(newSession);
+    return newSession;
+  }
+
+  //세션 키로 인트라 아이디 찾기
+  getIntraID(sessionKey: string): string | undefined {
+    const result = this.sessionArr.find((item) => item.key == sessionKey);
+    return result ? result.name : undefined;
+  }
+
+  //인트라 아이디로 세션 찾기
+  getSession(intraID: string): string | undefined {
+    const result = this.sessionArr.find((item) => item.name == intraID);
+    return result ? result.key : undefined;
+  }
 
   //모든 유저 찾기
   async findAllUser(): Promise<User[]> {
@@ -71,10 +93,10 @@ export class UserService {
   }
 
   //Opt 설정 업데이트
-  async updateOpt(intraID: string, Opt: boolean): Promise<boolean> {
+  async updateOpt(intraID: string, opt: boolean): Promise<boolean> {
     const userData = await this.findUser(intraID);
     if (userData == null || intraID == undefined) return false;
-    userData.isotp = Opt;
+    userData.isotp = opt;
     await this.userRepository.save(userData);
     return true;
   }

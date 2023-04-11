@@ -1,5 +1,16 @@
-import { Controller, Get, Redirect, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  NotAcceptableException,
+  Redirect,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
+import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { FTAuthGuard } from './ft_auth_guard';
@@ -15,7 +26,8 @@ export class AuthController {
   @Get()
   @UseGuards(FTAuthGuard)
   @Redirect('http://localhost:3000') //Redirection URL
-  async AuthLogic(@Req() req: any): Promise<void> {
+  // @Header('cookie', 'bbb')
+  async AuthLogic(@Req() req: any, @Res() res: Response): Promise<void> {
     //42 Resource 서버에 인트라 아이디 정보 요청
 
     //42 Resource 서버에서 인증된 AccessToken값 응답 확인
@@ -23,22 +35,38 @@ export class AuthController {
 
     //42 Server에 client & AccessToken을 사용하여 API 호출
     const intraData = await this.authService.getIntraData(accessToken);
+
     //client intraID를 DB 조회
-    const result = await this.userService.findUser(intraData['login']);
+    let result = await this.userService.findUser(intraData['login']);
     if (result == null) {
       //신규 생성
-      await this.userService.createUser(
+      result = await this.userService.createUser(
         intraData['login'],
         intraData['email'],
         intraData['image']['link'],
       );
-    } else {
-      //DB에 기존 데이터 존재
-      //TODO: 리다이렉트 주소(클라이언트 메인 페이지), 사용자 정보 값, 세션 키 값을 클라이언트에게 전달
-      const userData = await this.userService.findUser(intraData['login']);
-      console.log('==================');
-      console.log(userData);
     }
+
+    //세션 중복 확인
+    if (this.userService.getSession(intraData['login']) != undefined) {
+      throw new NotAcceptableException('Session already connected');
+    }
+    //세션 키 생성 및 저장
+    const sessionData = this.userService.createSession(intraData['login']);
+
+    //debug
+    console.log(`session Key : ${sessionData.key}`);
+    console.log(`session User : ${sessionData.name}`);
+    console.log(`User ID : ${result.id}`);
+    console.log(`User email : ${result.email}`);
+    console.log(`User win : ${result.wincount}`);
+    console.log(`User lose : ${result.losecount}`);
+    console.log(`User opt : ${result.isotp}`);
+    //res.setHeader('Set-Cookies', `session=alee2; HttpOnly`);
+    //res.setHeader('Set-Cookie', `sessionalee3; HttpOnly`);
+    res.cookie('session', 'gshim');
+    console.log(`key : ${sessionData.key}`);
     return;
+    // return { url: `http://localhost:3000/session=${sessionData.key}` };
   }
 }

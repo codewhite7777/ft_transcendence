@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   NotFoundException,
   Param,
   Post,
@@ -12,16 +13,15 @@ import { UserService } from './user.service';
 @Controller('/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
   @Get('/:id')
-  async getUser(@Param('id') intraID: string) {
+  async getUser(@Param('id') intraID: string, @Headers('mykey') header) {
     const userData = await this.userService.findUser(intraID);
     if (userData == null) throw new NotFoundException(`${intraID} not found.`);
     return userData;
   }
 
   // {
-  //   "intraID": "hena",
+  //   "intraID": "hena", //intraID -> Session , body -> header
   //   "result": {
   //     "win": false,
   //     "lose": true
