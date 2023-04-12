@@ -4,24 +4,40 @@ import {
   Delete,
   Get,
   Headers,
+  Inject,
   NotFoundException,
   Param,
   Post,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { CookieService } from 'src/cookie/cookie.service';
 import { UserService } from './user.service';
 
 @Controller('/user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
-  @Get('/:id')
-  async getUser(@Param('id') intraID: string, @Headers('mykey') header) {
+  constructor(
+    private readonly userService: UserService,
+    private readonly cookieService: CookieService,
+  ) {}
+  @Get()
+  async getUser(
+    @Param('id') intraID: string,
+    @Headers('cookie') cookieRaw: string,
+  ) {
+    console.log(`cookieRaw : ${cookieRaw}`);
+    const cookie = this.cookieService.extractCookie(cookieRaw);
+    console.log(`client Key : ${this.userService.getIntraID(cookie)}`); //??
+    console.log(`cookie Key : ${cookie}`);
+    // console.log(cookie);//
+    // console.log(`who : ${this.userService.getIntraID(cookie)}`);
     const userData = await this.userService.findUser(intraID);
     if (userData == null) throw new NotFoundException(`${intraID} not found.`);
     return userData;
   }
 
   // {
-  //   "intraID": "hena", //intraID -> Session , body -> header
+  //   "intraID": "hena",
   //   "result": {
   //     "win": false,
   //     "lose": true

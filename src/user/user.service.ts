@@ -15,12 +15,16 @@ export class UserService {
   createSession(intraID: string): { [key: string]: string } {
     const newSession = { key: uuid(), name: intraID };
     this.sessionArr.push(newSession);
+    console.log('create session');
+    console.log(this.sessionArr);
     return newSession;
   }
 
   //세션 키로 인트라 아이디 찾기
   getIntraID(sessionKey: string): string | undefined {
     const result = this.sessionArr.find((item) => item.key == sessionKey);
+    console.log(this.sessionArr);
+    console.log(`result !! : ${result}`);
     return result ? result.name : undefined;
   }
 

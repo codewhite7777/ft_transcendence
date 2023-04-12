@@ -6,8 +6,9 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(@Headers() header): string {
-    console.log(header);
+  getHello(@Headers() header: ParameterDecorator): string {
+    // console.log(header);
+    // console.log(header['cookie']);
     return this.appService.getHello();
   }
 }

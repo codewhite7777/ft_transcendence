@@ -1,7 +1,7 @@
 import {
   Controller,
   Get,
-  Header,
+  Inject,
   NotAcceptableException,
   Redirect,
   Req,
@@ -26,7 +26,6 @@ export class AuthController {
   @Get()
   @UseGuards(FTAuthGuard)
   @Redirect('http://localhost:3000') //Redirection URL
-  // @Header('cookie', 'bbb')
   async AuthLogic(@Req() req: any, @Res() res: Response): Promise<void> {
     //42 Resource 서버에 인트라 아이디 정보 요청
 
@@ -57,16 +56,14 @@ export class AuthController {
     //debug
     console.log(`session Key : ${sessionData.key}`);
     console.log(`session User : ${sessionData.name}`);
-    console.log(`User ID : ${result.id}`);
-    console.log(`User email : ${result.email}`);
-    console.log(`User win : ${result.wincount}`);
-    console.log(`User lose : ${result.losecount}`);
-    console.log(`User opt : ${result.isotp}`);
-    //res.setHeader('Set-Cookies', `session=alee2; HttpOnly`);
-    //res.setHeader('Set-Cookie', `sessionalee3; HttpOnly`);
-    res.cookie('session', 'gshim');
-    console.log(`key : ${sessionData.key}`);
+    // console.log(`User ID : ${result.id}`);
+    // console.log(`User email : ${result.email}`);
+    // console.log(`User win : ${result.wincount}`);
+    // console.log(`User lose : ${result.losecount}`);
+    // console.log(`User opt : ${result.isotp}`);
+
+    //쿠키 값 전달
+    res.cookie('session_key', sessionData.key);
     return;
-    // return { url: `http://localhost:3000/session=${sessionData.key}` };
   }
 }
