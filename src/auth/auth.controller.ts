@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Inject,
   NotAcceptableException,
   Redirect,
   Req,
@@ -11,6 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { MailService } from 'src/mail/mail.service';
+import { OtpService } from 'src/otp/otp.service';
 import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
@@ -23,6 +23,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private userService: UserService,
     private mailService: MailService,
+    private optService: OtpService,
   ) {}
 
   @Get()
@@ -53,9 +54,8 @@ export class AuthController {
       throw new NotAcceptableException('Session already connected');
     }
 
-
     //otp 미 사용자 처리
-    // if (result.isotp == false) {
+    if (result.isotp == false) {
       //세션 키 생성 및 저장
       const sessionData = this.userService.createSession(intraData['login']);
       //debug
@@ -68,9 +68,11 @@ export class AuthController {
       // console.log(`User opt : ${result.isotp}`);
       //쿠키 값 전달
       res.cookie('session_key', sessionData.key);
-    // }
-
-    this.mailService.sendHello();
+    } else {
+      const optKey = this.optService.createOptKey(result.intraid);
+      this.mailService.sendEmail(result.email, optKey);
+      this.optService.getOptArr();
+    }
     return;
   }
 }
