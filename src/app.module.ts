@@ -7,9 +7,17 @@ import { UserModule } from './user/user.module';
 import { UserService } from './user/user.service';
 import { CookieModule } from './cookie/cookie.module';
 import { OtpModule } from './otp/otp.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
-  imports: [AuthModule, UserModule, DatabaseModule, CookieModule, OtpModule],
+  imports: [
+    AuthModule,
+    UserModule,
+    DatabaseModule,
+    CookieModule,
+    OtpModule,
+    MailModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
