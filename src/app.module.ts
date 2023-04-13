@@ -6,9 +6,10 @@ import { DatabaseModule } from './database.module';
 import { UserModule } from './user/user.module';
 import { UserService } from './user/user.service';
 import { CookieModule } from './cookie/cookie.module';
+import { OtpModule } from './otp/otp.module';
 
 @Module({
-  imports: [AuthModule, UserModule, DatabaseModule, CookieModule],
+  imports: [AuthModule, UserModule, DatabaseModule, CookieModule, OtpModule],
   controllers: [AppController],
   providers: [AppService],
 })
