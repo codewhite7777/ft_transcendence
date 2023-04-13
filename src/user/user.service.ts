@@ -11,20 +11,17 @@ export class UserService {
     @Inject('USER_REPOSITORY') private userRepository: Repository<User>,
   ) {}
 
+
   //세션 키 발급
   createSession(intraID: string): { [key: string]: string } {
     const newSession = { key: uuid(), name: intraID };
     this.sessionArr.push(newSession);
-    console.log('create session');
-    console.log(this.sessionArr);
     return newSession;
   }
 
   //세션 키로 인트라 아이디 찾기
   getIntraID(sessionKey: string): string | undefined {
     const result = this.sessionArr.find((item) => item.key == sessionKey);
-    console.log(this.sessionArr);
-    console.log(`result !! : ${result}`);
     return result ? result.name : undefined;
   }
 
@@ -96,11 +93,11 @@ export class UserService {
     return true;
   }
 
-  //Opt 설정 업데이트
-  async updateOpt(intraID: string, opt: boolean): Promise<boolean> {
+  //Otp 설정 업데이트
+  async updateOtp(intraID: string, otp: boolean): Promise<boolean> {
     const userData = await this.findUser(intraID);
     if (userData == null || intraID == undefined) return false;
-    userData.isotp = opt;
+    userData.isotp = otp;
     await this.userRepository.save(userData);
     return true;
   }
