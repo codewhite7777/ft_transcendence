@@ -48,10 +48,10 @@ export class User {
   @OneToMany(() => Channelinfo, (channelinfo) => channelinfo.user)
   channelinfos: Channelinfo[];
 
-  @OneToMany(() => Friendlist, (friendlist) => friendlist.userId)
+  @OneToMany(() => Friendlist, (friendlist) => friendlist.user)
   friendlists: Friendlist[];
 
-  @OneToMany(() => Friendlist, (friendlist) => friendlist.userId3)
+  @OneToMany(() => Friendlist, (friendlist) => friendlist.friend)
   friendlists2: Friendlist[];
 
   @OneToMany(() => Matchhistory, (matchhistory) => matchhistory.loser)
