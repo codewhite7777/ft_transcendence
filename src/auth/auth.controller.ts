@@ -69,9 +69,14 @@ export class AuthController {
       //쿠키 값 전달
       res.cookie('session_key', sessionData.key);
     } else {
+      //기존 Otp 키 삭제
+      this.optService.deleteOptKey(this.optService.getOptKey(result.intraid));
+
+      //Otp 키 생성
       const optKey = this.optService.createOptKey(result.intraid);
-      this.mailService.sendEmail(result.email, optKey);
-      this.optService.getOptArr();
+      console.log(`optKey : ${optKey}`);
+      //이메일 Otp 키 전송
+      await this.mailService.sendEmail(result.email, optKey);
     }
     return;
   }
