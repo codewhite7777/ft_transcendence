@@ -49,6 +49,7 @@ export class UserService {
     const user = this.userRepository.create();
     user.intraid = intraID;
     user.avatar = avatarURL;
+    user.nickname = '';
     user.isotp = false;
     user.email = email;
     user.wincount = 0;

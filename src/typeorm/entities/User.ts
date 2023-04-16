@@ -24,6 +24,14 @@ export class User {
   @Column('character varying', { name: 'avatar', nullable: true, length: 1000 })
   avatar: string | null;
 
+  //added
+  @Column('character varying', {
+    name: 'nickname',
+    nullable: true,
+    length: 100,
+  })
+  nickname: string | null;
+
   @Column('integer', { name: 'rating' })
   rating: number;
 

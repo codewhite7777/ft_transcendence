@@ -84,7 +84,11 @@ export class UserController {
     @Headers('cookie') cookieRaw: string,
     @Body('otp') otp: boolean,
   ) {
+    // console.log('cookie raw');
+    // console.log(cookieRaw);
     const cookie = this.cookieService.extractCookie(cookieRaw);
+    // console.log('cookie');
+    // console.log(cookie);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const updateOtp = await this.userService.updateOtp(target, otp);

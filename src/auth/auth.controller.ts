@@ -11,7 +11,6 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { MailService } from 'src/mail/mail.service';
 import { OtpService } from 'src/otp/otp.service';
-import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { FTAuthGuard } from './ft_auth_guard';
@@ -58,7 +57,8 @@ export class AuthController {
     if (result.isotp == false) {
       //세션 키 생성 및 저장
       const sessionData = this.userService.createSession(intraData['login']);
-      //debug
+      //for debug
+      console.log(`otp 미 사용자 세션 생성`);
       console.log(`session Key : ${sessionData.key}`);
       console.log(`session User : ${sessionData.name}`);
       // console.log(`User ID : ${result.id}`);
@@ -69,12 +69,15 @@ export class AuthController {
       //쿠키 값 전달
       res.cookie('session_key', sessionData.key);
     } else {
+      //for debug
+      console.log(`otp 사용자 세션 생성`);
+      console.log(`이메일 발송`);
       //기존 Otp 키 삭제
       this.optService.deleteOptKey(this.optService.getOptKey(result.intraid));
 
       //Otp 키 생성
       const optKey = this.optService.createOptKey(result.intraid);
-      console.log(`optKey : ${optKey}`);
+
       //이메일 Otp 키 전송
       await this.mailService.sendEmail(result.email, optKey);
     }

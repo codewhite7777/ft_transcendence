@@ -33,15 +33,14 @@ export class OtpController {
 
     //Otp 값으로 요청 클라이언트 아이디 찾기
     const intraID = this.optService.getOptUser(reqOptKey);
-    if (intraID == undefined) throw new NotFoundException('no match founded');
+    if (intraID == undefined) throw new NotFoundException('no match found.');
 
     //Otp 키 제거
     this.optService.deleteOptKey(reqOptKey);
 
     //세션 키 생성 및 저장
     const sessionData = this.userService.createSession(intraID);
-    console.log(sessionData.key);
-    console.log('otp client cookie created');
+
     //쿠키 값 전달
     res.cookie('session_key', sessionData.key);
     return;
