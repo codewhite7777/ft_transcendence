@@ -13,7 +13,7 @@ export const databaseProviders = [
       const dataSource = new DataSource({
         name: 'default',
         type: 'postgres',
-        host: 'localhost',
+        host: 'postgres',
         port: 5432,
         username: 'postgres',
         password: '1234',
