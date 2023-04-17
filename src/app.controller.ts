@@ -9,9 +9,4 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
-
-  @Get('/setnick')
-  getNick(): string {
-    return 'this page is set nickname';
-  }
 }
