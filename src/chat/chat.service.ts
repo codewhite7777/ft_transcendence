@@ -11,6 +11,7 @@ export class ChatService {
     private channelRepository: Repository<Channel>,
     @Inject('CHANNELINFO_REPOSITORY')
     private channelInfoRepository: Repository<Channelinfo>,
+    @Inject('USER_REPOSITORY')
     private userRepository: Repository<User>,
   ) {}
 
