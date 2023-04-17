@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { MailService } from 'src/mail/mail.service';
 import { OtpService } from 'src/otp/otp.service';
+import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { FTAuthGuard } from './ft_auth_guard';
@@ -27,8 +28,8 @@ export class AuthController {
 
   @Get()
   @UseGuards(FTAuthGuard)
-  @Redirect('http://localhost:3000') //Redirection URL
-  async AuthLogic(@Req() req: any, @Res() res: Response): Promise<void> {
+  async AuthLogic(@Req() req: any, @Res() res: Response) {
+    let redirectURL = 'http://localhost:3001/a'; //main page url
     //42 Resource 서버에 인트라 아이디 정보 요청
 
     //42 Resource 서버에서 인증된 AccessToken값 응답 확인
@@ -39,6 +40,7 @@ export class AuthController {
 
     //client intraID를 DB 조회
     let result = await this.userService.findUser(intraData['login']);
+    let firstFlag = false;
     if (result == null) {
       //신규 생성
       result = await this.userService.createUser(
@@ -46,6 +48,7 @@ export class AuthController {
         intraData['email'],
         intraData['image']['link'],
       );
+      firstFlag = true;
     }
 
     //세션 중복 확인
@@ -68,9 +71,16 @@ export class AuthController {
       // console.log(`User opt : ${result.isotp}`);
       //쿠키 값 전달
       res.cookie('session_key', sessionData.key);
+      if (firstFlag == true) {
+        //intraID 쿠키 값 설정
+        res.cookie('nickname', result.intraid);
+
+        //리디렉션 join 설정
+        redirectURL = 'http://localhost:3001/join';
+      }
     } else {
       //for debug
-      console.log(`otp 사용자 세션 생성`);
+      console.log(`otp 사용자 세션 미 생성`);
       console.log(`이메일 발송`);
       //기존 Otp 키 삭제
       this.optService.deleteOptKey(this.optService.getOptKey(result.intraid));
@@ -80,7 +90,15 @@ export class AuthController {
 
       //이메일 Otp 키 전송
       await this.mailService.sendEmail(result.email, optKey);
+
+      //email 쿠키 값 설정
+      res.cookie('email', result.email);
+
+      //리디렉션 otp 설정
+      redirectURL = 'http://localhost:3001/otp';
     }
+    res.redirect(redirectURL);
     return;
+    // return { url: redirectURL };
   }
 }

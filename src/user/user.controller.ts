@@ -5,12 +5,16 @@ import {
   ForbiddenException,
   Get,
   Headers,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Post,
+  Req,
 } from '@nestjs/common';
 import { CookieService } from 'src/cookie/cookie.service';
 import { UserService } from './user.service';
+import * as cookieParser from 'cookie-parser';
+import { Request } from 'express';
 
 @Controller('/user')
 export class UserController {
@@ -62,7 +66,7 @@ export class UserController {
   // {
   //   "email": "alee@gmail.com"
   // }
-  @Post('/email') //ok
+  @Post('/email') //이메일 변경 요청
   async updateEmail(
     @Headers('cookie') cookieRaw: string,
     @Body('email') email: string,
@@ -76,10 +80,31 @@ export class UserController {
     return;
   }
 
+  @Post('/join') //닉네임 설정 요청
+  async updateNickname(
+    //@Headers('cookie') cookieRaw: string,
+    @Body('nickname') nickname: string,
+    @Req() req: Request,
+  ) {
+    console.log('!!!!!!!!');
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
+    if (cookie == undefined) throw new NotFoundException('cookie not found');
+    const target = this.userService.getIntraID(cookie);
+    // console.log(`요청자 : ${target}`);
+    // console.log(`요청 닉네임 : ${nickname}`);
+    const updateNickname = await this.userService.updateNickname(
+      target,
+      nickname,
+    );
+    if (updateNickname == false)
+      throw new InternalServerErrorException('already exist nickname');
+    return;
+  }
+
   // {
   //   "otp": true
   // }
-  @Post('/otp')
+  @Post('/otp') //otp 설정 요청
   async updateOtp(
     @Headers('cookie') cookieRaw: string,
     @Body('otp') otp: boolean,

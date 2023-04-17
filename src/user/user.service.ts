@@ -40,6 +40,13 @@ export class UserService {
     return this.userRepository.findOne({ where: { intraid: intraID } });
   }
 
+  //닉네임 찾기
+  async findNickname(findNickname: string): Promise<User> {
+    return await this.userRepository.findOne({
+      where: { nickname: findNickname },
+    });
+  }
+
   //유저 생성
   async createUser(
     intraID: string,
@@ -49,12 +56,14 @@ export class UserService {
     const user = this.userRepository.create();
     user.intraid = intraID;
     user.avatar = avatarURL;
-    user.nickname = '';
+    user.nickname = null;
     user.isotp = false;
     user.email = email;
     user.wincount = 0;
     user.losecount = 0;
     user.rating = 1200;
+    const temp = await this.userRepository.save(user);
+    user.nickname = `anon_${temp.id}`;
     return this.userRepository.save(user);
   }
 
@@ -98,6 +107,16 @@ export class UserService {
     const userData = await this.findUser(intraID);
     if (userData == null || intraID == undefined) return false;
     userData.isotp = otp;
+    await this.userRepository.save(userData);
+    return true;
+  }
+
+  //닉네임 설정 업데이트
+  async updateNickname(intraID: string, nickname: string): Promise<boolean> {
+    const findData = await this.findNickname(nickname);
+    if (findData != null || intraID == undefined) return false;
+    const userData = await this.findUser(intraID);
+    userData.nickname = nickname;
     await this.userRepository.save(userData);
     return true;
   }
