@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Inject,
   NotAcceptableException,
   Redirect,
   Req,
@@ -10,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import { MailService } from 'src/mail/mail.service';
+import { OtpService } from 'src/otp/otp.service';
 import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
@@ -21,6 +22,8 @@ export class AuthController {
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
     private userService: UserService,
+    private mailService: MailService,
+    private optService: OtpService,
   ) {}
 
   @Get()
@@ -50,20 +53,26 @@ export class AuthController {
     if (this.userService.getSession(intraData['login']) != undefined) {
       throw new NotAcceptableException('Session already connected');
     }
-    //세션 키 생성 및 저장
-    const sessionData = this.userService.createSession(intraData['login']);
 
-    //debug
-    console.log(`session Key : ${sessionData.key}`);
-    console.log(`session User : ${sessionData.name}`);
-    // console.log(`User ID : ${result.id}`);
-    // console.log(`User email : ${result.email}`);
-    // console.log(`User win : ${result.wincount}`);
-    // console.log(`User lose : ${result.losecount}`);
-    // console.log(`User opt : ${result.isotp}`);
-
-    //쿠키 값 전달
-    res.cookie('session_key', sessionData.key);
+    //otp 미 사용자 처리
+    if (result.isotp == false) {
+      //세션 키 생성 및 저장
+      const sessionData = this.userService.createSession(intraData['login']);
+      //debug
+      console.log(`session Key : ${sessionData.key}`);
+      console.log(`session User : ${sessionData.name}`);
+      // console.log(`User ID : ${result.id}`);
+      // console.log(`User email : ${result.email}`);
+      // console.log(`User win : ${result.wincount}`);
+      // console.log(`User lose : ${result.losecount}`);
+      // console.log(`User opt : ${result.isotp}`);
+      //쿠키 값 전달
+      res.cookie('session_key', sessionData.key);
+    } else {
+      const optKey = this.optService.createOptKey(result.intraid);
+      this.mailService.sendEmail(result.email, optKey);
+      this.optService.getOptArr();
+    }
     return;
   }
 }

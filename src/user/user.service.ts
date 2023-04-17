@@ -11,7 +11,6 @@ export class UserService {
     @Inject('USER_REPOSITORY') private userRepository: Repository<User>,
   ) {}
 
-
   //세션 키 발급
   createSession(intraID: string): { [key: string]: string } {
     const newSession = { key: uuid(), name: intraID };
