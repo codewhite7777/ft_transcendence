@@ -8,6 +8,7 @@ import { UserService } from './user/user.service';
 import { CookieModule } from './cookie/cookie.module';
 import { OtpModule } from './otp/otp.module';
 import { MailModule } from './mail/mail.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MailModule } from './mail/mail.module';
     CookieModule,
     OtpModule,
     MailModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
