@@ -40,6 +40,11 @@ export class UserService {
     return this.userRepository.findOne({ where: { intraid: intraID } });
   }
 
+  //PK 값으로 유저 찾기
+  async findUserByID(id: number): Promise<User> {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
   //닉네임 찾기
   async findNickname(findNickname: string): Promise<User> {
     return await this.userRepository.findOne({

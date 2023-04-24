@@ -4,7 +4,6 @@ import {
   Delete,
   ForbiddenException,
   Get,
-  Headers,
   InternalServerErrorException,
   NotFoundException,
   Param,
@@ -13,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { CookieService } from 'src/cookie/cookie.service';
 import { UserService } from './user.service';
-import * as cookieParser from 'cookie-parser';
 import { Request } from 'express';
 
 @Controller('/user')
@@ -34,8 +32,8 @@ export class UserController {
   //   "isotp": true
   // }
   @Get()
-  async getUser(@Headers('cookie') cookieRaw: string) {
-    const cookie = this.cookieService.extractCookie(cookieRaw);
+  async getMyUser(@Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const userData = await this.userService.findUser(target);
@@ -43,6 +41,16 @@ export class UserController {
     return userData;
   }
 
+  @Get(':id')
+  async getUser(@Param('id') intraID: string, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
+    if (cookie == undefined) throw new NotFoundException('cookie not found');
+    const userData = await this.userService.findUser(intraID);
+    if (userData == null) throw new NotFoundException(`client not found.`);
+    return userData;
+  }
+
+  //
   // {
   //   "result": {
   //     "win": false,
@@ -50,11 +58,8 @@ export class UserController {
   //   }
   // }
   @Post('/result')
-  async updateResult(
-    @Headers('cookie') cookieRaw: string,
-    @Body('result') result,
-  ) {
-    const cookie = this.cookieService.extractCookie(cookieRaw);
+  async updateResult(@Body('result') result, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const updateResult = await this.userService.updateResult(target, result);
@@ -67,11 +72,8 @@ export class UserController {
   //   "email": "alee@gmail.com"
   // }
   @Post('/email') //이메일 변경 요청
-  async updateEmail(
-    @Headers('cookie') cookieRaw: string,
-    @Body('email') email: string,
-  ) {
-    const cookie = this.cookieService.extractCookie(cookieRaw);
+  async updateEmail(@Body('email') email: string, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const updateEmail = await this.userService.updateEmail(target, email);
@@ -82,16 +84,12 @@ export class UserController {
 
   @Post('/join') //닉네임 설정 요청
   async updateNickname(
-    //@Headers('cookie') cookieRaw: string,
     @Body('nickname') nickname: string,
     @Req() req: Request,
   ) {
-    console.log('!!!!!!!!');
     const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
-    // console.log(`요청자 : ${target}`);
-    // console.log(`요청 닉네임 : ${nickname}`);
     const updateNickname = await this.userService.updateNickname(
       target,
       nickname,
@@ -105,15 +103,8 @@ export class UserController {
   //   "otp": true
   // }
   @Post('/otp') //otp 설정 요청
-  async updateOtp(
-    @Headers('cookie') cookieRaw: string,
-    @Body('otp') otp: boolean,
-  ) {
-    // console.log('cookie raw');
-    // console.log(cookieRaw);
-    const cookie = this.cookieService.extractCookie(cookieRaw);
-    // console.log('cookie');
-    // console.log(cookie);
+  async updateOtp(@Body('otp') otp: boolean, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const updateOtp = await this.userService.updateOtp(target, otp);
@@ -125,11 +116,8 @@ export class UserController {
   //   "url": "https://i.imgflip.com/1rpfag.jpg"
   // }
   @Post('/avatar')
-  async updateAvatarURL(
-    @Headers('cookie') cookieRaw: string,
-    @Body('url') url: string,
-  ) {
-    const cookie = this.cookieService.extractCookie(cookieRaw);
+  async updateAvatarURL(@Body('url') url: string, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const updateURL = await this.userService.updateURL(target, url);
@@ -141,12 +129,8 @@ export class UserController {
   //   "intraID": "hena",
   // }
   @Delete('/:id')
-  async deleteUser(
-    @Headers('cookie') cookieRaw: string,
-    @Param('id') intraID: string,
-  ) {
-    console.log(intraID);
-    const cookie = this.cookieService.extractCookie(cookieRaw);
+  async deleteUser(@Param('id') intraID: string, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     if (intraID != target) throw new ForbiddenException('forbbiden request.');
