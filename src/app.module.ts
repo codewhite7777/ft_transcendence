@@ -9,7 +9,11 @@ import { CookieModule } from './cookie/cookie.module';
 import { OtpModule } from './otp/otp.module';
 import { MailModule } from './mail/mail.module';
 import { ChatModule } from './chat/chat.module';
+<<<<<<< HEAD
 import { FriendlistModule } from './friendlist/friendlist.module';
+=======
+import { FriendlistModule } from './friendlist/friendlist.module';
+>>>>>>> 0c730a6 (feat : Friend, BlackList CRUD)
 import { UserblacklistModule } from './userblacklist/userblacklist.module';
 
 @Module({
