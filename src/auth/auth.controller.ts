@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   NotAcceptableException,
-  Redirect,
   Req,
   Res,
   UseGuards,
@@ -11,11 +10,11 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { MailService } from 'src/mail/mail.service';
 import { OtpService } from 'src/otp/otp.service';
-import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { FTAuthGuard } from './ft_auth_guard';
 
+@UseGuards(FTAuthGuard)
 @Controller('/auth')
 export class AuthController {
   constructor(
@@ -27,7 +26,6 @@ export class AuthController {
   ) {}
 
   @Get()
-  @UseGuards(FTAuthGuard)
   async AuthLogic(@Req() req: any, @Res() res: Response) {
     let redirectURL = 'http://localhost:3001/a'; //main page url
     //42 Resource 서버에 인트라 아이디 정보 요청
@@ -99,6 +97,5 @@ export class AuthController {
     }
     res.redirect(redirectURL);
     return;
-    // return { url: redirectURL };
   }
 }

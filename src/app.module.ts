@@ -8,6 +8,8 @@ import { CookieModule } from './cookie/cookie.module';
 import { OtpModule } from './otp/otp.module';
 import { MailModule } from './mail/mail.module';
 import { ChatModule } from './chat/chat.module';
+import { FriendlistModule } from './friendlist/friendlist.module';
+import { UserblacklistModule } from './userblacklist/userblacklist.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
@@ -20,6 +22,8 @@ import { EventsModule } from './events/events.module';
     MailModule,
     ChatModule,
     EventsModule,
+    FriendlistModule,
+    UserblacklistModule,
   ],
   controllers: [AppController],
   providers: [AppService],
