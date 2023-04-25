@@ -4,11 +4,11 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database.module';
 import { UserModule } from './user/user.module';
-import { UserService } from './user/user.service';
 import { CookieModule } from './cookie/cookie.module';
 import { OtpModule } from './otp/otp.module';
 import { MailModule } from './mail/mail.module';
 import { ChatModule } from './chat/chat.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -19,6 +19,7 @@ import { ChatModule } from './chat/chat.module';
     OtpModule,
     MailModule,
     ChatModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
