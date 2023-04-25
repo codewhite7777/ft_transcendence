@@ -19,30 +19,53 @@ export class ChatService {
   async createChannel(
     kind: number,
     owner: number,
-    roomName: string,
-    roomPassword: string,
+    roomname: string,
+    roomPassword?: string,
   ) {
+    console.log(`[Service] ${kind}, ${owner}, ${roomname}, ${roomPassword}`);
+    if (
+      !(
+        (await this.channelRepository.findOne({ where: { roomname } })) ==
+        undefined
+      )
+    )
+      throw Error('Room Already Exist');
     const newChannel = this.channelRepository.create();
     newChannel.kind = kind;
     newChannel.owner = await this.userRepository.findOne({
       where: { id: owner },
     });
-    newChannel.roomname = roomName;
-    newChannel.roompassword = this.encryptPassword(roomPassword);
+    newChannel.roomname = roomname;
+    newChannel.users = [];
+    newChannel.channelinfos = [];
+    if (roomPassword)
+      newChannel.roompassword = this.encryptPassword(roomPassword);
     return this.channelRepository.save(newChannel);
   }
 
   // read channel
   async getAllChannel() {
-    return this.channelRepository.find();
+    return this.channelRepository.find({
+      relations: { owner: true },
+      select: {
+        owner: { intraid: true },
+      },
+    });
   }
   async getChannelByKind(kind: number) {
     return this.channelRepository.find({
       where: { kind },
+      relations: { owner: true },
     });
   }
   async getChannelById(id: number) {
     return this.channelRepository.findOneBy({ id });
+  }
+  async getChannelByName(roomname: string) {
+    return this.channelRepository.findOne({
+      where: { roomname },
+      relations: { channelinfos: true },
+    });
   }
 
   // update channel -> 무엇을 바꾸느냐에 따라 함수를 쪼개야 할듯...
@@ -73,19 +96,40 @@ export class ChatService {
 
   // delete channel
   async deleteChannel(channel: Channel) {
-    const ret = this.channelRepository.delete(channel);
+    //const ret = this.channelRepository.delete(channel);
+    const ret = this.channelRepository.remove(channel);
+    console.log(ret); // 결과값에 따라 삭제되었는지 안삭제되었는지 판단하여 반환할것.
+  }
+
+  async deleteChannelById(channelId: number) {
+    const ret = this.channelRepository.delete(channelId);
+    console.log(ret); // 결과값에 따라 삭제되었는지 안삭제되었는지 판단하여 반환할것.
   }
 
   // join channel(누가, 어디채팅방에 참여한다)
-  async joinChannel(channel: Channel, user: User) {
-    channel.users.push(user);
-    this.channelRepository.save(channel);
-  }
-  async joinChannel2(channel: Channel, user: User) {
-    const channelInfo = this.channelInfoRepository.create();
-    channelInfo.ch = channel;
-    channelInfo.user = user;
-    return this.channelInfoRepository.save(channelInfo);
+  async joinChannel(
+    channel: Channel,
+    user: User,
+    isOwner: boolean,
+    isAdmin: boolean,
+  ) {
+    console.log('channel, user = ', channel, user);
+    //console.log('channel.users: ', channel.users);
+
+    // logic
+    //channel.users.push(user);
+
+    const newChannelinfos = this.channelInfoRepository.create();
+    newChannelinfos.chid = channel.id;
+    newChannelinfos.userid = user.id;
+    newChannelinfos.isowner = isOwner;
+    newChannelinfos.isadmin = isAdmin;
+    // newChannelinfos를 save하지 않아도 괜찮은걸까? => save안하면 db에서 발견이 되지 않는다...
+    await this.channelInfoRepository.save(newChannelinfos);
+    channel.channelinfos.push(newChannelinfos);
+
+    const updatedChannel = await this.channelRepository.save(channel);
+    console.log('updatedChannel: ', updatedChannel);
   }
 
   // left channel(누가, 어디채팅방에서 나간다)
