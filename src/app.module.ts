@@ -10,6 +10,7 @@ import { MailModule } from './mail/mail.module';
 import { ChatModule } from './chat/chat.module';
 import { FriendlistModule } from './friendlist/friendlist.module';
 import { UserblacklistModule } from './userblacklist/userblacklist.module';
+import { MatchhistoryModule } from './matchhistory/matchhistory.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { EventsModule } from './events/events.module';
     EventsModule,
     FriendlistModule,
     UserblacklistModule,
+    MatchhistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

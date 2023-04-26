@@ -25,6 +25,7 @@ export class UserController {
   //   "id": 20,
   //   "intraid": "alee",
   //   "avatar": "https://i.imgflip.com/1rpfag.jpg",
+  //   "nickname":"ft_alee"
   //   "rating": 1205,
   //   "wincount": 10,
   //   "losecount": 5,
@@ -37,6 +38,7 @@ export class UserController {
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
     const userData = await this.userService.findUser(target);
+    userData.nickname
     if (userData == null) throw new NotFoundException(`client not found.`);
     return userData;
   }
