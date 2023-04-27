@@ -3,6 +3,6 @@ import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
   imports: [ChatModule],
-  providers: [EventsGateway],
+  providers: [EventsModule],
 })
 export class EventsModule {}
