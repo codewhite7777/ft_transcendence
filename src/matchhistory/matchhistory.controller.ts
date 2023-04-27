@@ -25,18 +25,31 @@ async dummyCreate(){
   return;
 }
 
-@Get()
-async getMatchHistoryList(@Req() req: Request) {
+// @Get()
+// async getMatchHistoryList(@Req() req: Request) {
+//     //debug
+//     console.log('[매치 히스토리 요청]');
+//     const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
+//     if (cookie == undefined) throw new NotFoundException('cookie not found');
+//     const intraID = await this.userService.getIntraID(cookie);
+//     const userData = await this.userService.findUser(intraID);
+//     console.log(`유저데이터 아이디 : ${userData.id}`);
+//     const result = await this.matchhistoryService.getMatchHistory(userData.id)
+//     return result;
+//     }
+
+  @Get(':id')
+    async getMatchHistoryList(@Param('id') intraID: string, @Req() req: Request) {
     //debug
     console.log('[매치 히스토리 요청]');
     const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
-    const intraID = await this.userService.getIntraID(cookie);
     const userData = await this.userService.findUser(intraID);
-    console.log(`유저데이터 아이디 : ${userData.id}`);
+    if (userData == null) throw new NotFoundException(`client not found.`);
     const result = await this.matchhistoryService.getMatchHistory(userData.id)
     return result;
-    }
+  }
+
 
   // {
   //  "winnerid":"alee",
