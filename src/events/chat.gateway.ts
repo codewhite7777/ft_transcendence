@@ -131,15 +131,17 @@ export class ChatGateway
   // Todo: 이미 참여한 유저에 대해서 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
   async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
-    const { roomName } = data;
-
+    const { userId, roomName } = data;
+    console.log('joinChannel: ', userId, ', ', roomName);
+    if (!userId || !roomName) return `Error: parameter error`;
     // join on db level
     // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
     const channel: Channel = await this.chatService.getChannelByName(roomName);
     if (channel === null) throw Error("Channel doesn't exist");
-    const user: User = await this.userService.findUserById(client.userId);
+    const user: User = await this.userService.findUserById(userId);
+    console.log('user: ', user);
     if (user === null) throw Error("User doesn't exist");
-    this.chatService.joinChannel(channel, user, false, false);
+    await this.chatService.joinChannel(channel, user, false, false);
     // join on socket level
     client.join(roomName);
     console.log('client.rooms: ', client.rooms);
