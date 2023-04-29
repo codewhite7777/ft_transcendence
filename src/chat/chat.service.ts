@@ -64,7 +64,7 @@ export class ChatService {
   async getChannelByName(roomname: string) {
     return this.channelRepository.findOne({
       where: { roomname },
-      relations: { channelinfos: true },
+      relations: { channelinfos: true, owner: true },
     });
   }
 
@@ -137,13 +137,11 @@ export class ChatService {
     if (channel.owner === user) {
       // throw error : 방장은 나갈 수 없습니다.
     }
-    const index = channel.users.indexOf(user);
-    if (index !== -1) {
-      channel.users.splice(index, 1);
-    } else {
-      // throw error
-    }
-    return this.channelRepository.save(channel);
+
+    return this.channelInfoRepository.delete({
+      chid: channel.id,
+      userid: user.id,
+    });
   }
   // delegate(채널에서 owner를 A에서 B로 위임한다.)
   async delegate(channel: Channel, user: User) {

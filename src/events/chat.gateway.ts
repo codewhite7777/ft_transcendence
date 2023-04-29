@@ -169,4 +169,32 @@ export class ChatGateway
     };
     this.server.to(roomName).emit('welcome', welcomeData);
   }
+
+  @SubscribeMessage('leftChannel')
+  async handleLeft(@ConnectedSocket() client, @MessageBody() data) {
+    const { roomname, userId } = data;
+    if (!roomname || !userId)
+      return `Error: 필요한 인자가 주어지지 않았습니다.`;
+    console.log('leftChannel event: ', roomname, userId);
+
+    if (!client.rooms.has(roomname))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+
+    const channel = await this.chatService.getChannelByName(roomname);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
+    if (channel.owner.id === userId)
+      return `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`;
+
+    this.server
+      .to(roomname)
+      .emit(
+        'chat',
+        `Server🤖: User ${client.id} has left the room ${roomname}`,
+      );
+    client.leave(roomname);
+    await this.chatService.leftChannel(channel, user);
+    return `Success: 채널 ${roomname}에서 클라이언트 ${user.intraid}가 성공적으로 퇴장했습니다.`;
+  }
 }
