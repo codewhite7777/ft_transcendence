@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Friendlist } from 'src/typeorm/entities/Friendlist';
+import { User } from 'src/typeorm/entities/User';
 import { UserService } from 'src/user/user.service';
 import { Repository } from 'typeorm';
 
@@ -13,7 +14,7 @@ export class FriendlistService {
 
   //프랜드 리스트 반환
   async getFriendList(myID: number) {
-    const myFriendList: string[] = [];
+    const myFriendList: User[] = [];
 
     const friendList = await this.friendRepository.find({
       where: { userId1: myID },
@@ -21,8 +22,10 @@ export class FriendlistService {
     const ret = friendList.map((elem) => elem.userId2);
     for (let i = 0; i < ret.length; i++) {
       const friendData = await this.userService.findUserByID(ret[i]);
-      myFriendList.push(friendData.intraid);
+      myFriendList.push(friendData);
     }
+    console.log('친구 데이터');
+    console.log(myFriendList);
     return myFriendList;
   }
 

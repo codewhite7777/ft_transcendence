@@ -27,7 +27,7 @@ export class AuthController {
 
   @Get()
   async AuthLogic(@Req() req: any, @Res() res: Response) {
-    let redirectURL = 'http://localhost:3001/a'; //main page url
+    let redirectURL = 'http://localhost:3001/loginok'; //main page url
     //42 Resource 서버에 인트라 아이디 정보 요청
 
     //42 Resource 서버에서 인증된 AccessToken값 응답 확인
