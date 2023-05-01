@@ -145,24 +145,58 @@ export class ChatService {
   }
   // delegate(채널에서 owner를 A에서 B로 위임한다.)
   async delegate(channel: Channel, user: User) {
+    const channelInfo = await this.channelInfoRepository.findOne({
+      where: { chid: channel.id, userid: user.id },
+    });
+    const channelInfo2 = await this.channelInfoRepository.findOne({
+      where: { chid: channel.id, userid: channel.owner.id },
+    });
+
+    if (channelInfo.isowner) throw Error('이미 방장임');
+    await this.changeRole(channelInfo, true, true);
+    await this.changeRole(channelInfo2, false, false);
+    const ret = await this.channelInfoRepository.save(channelInfo);
+    const ret2 = await this.channelInfoRepository.save(channelInfo2);
+    console.log('channelInfo update ret: ', ret, ret2);
+
     channel.owner = user;
     return this.channelRepository.save(channel);
   }
   // permisson(채널에서 A를 admin으로 임명한다.)
-  async permisson(ch: Channel, user: User) {
-    ch.users.push(user);
-    return this.channelRepository.save(ch);
+  async permission(ch: Channel, user: User) {
+    const channelInfo = await this.channelInfoRepository.findOne({
+      where: { chid: ch.id, userid: user.id },
+    });
+    console.log('channelInfo: ', channelInfo);
+
+    if (channelInfo.isadmin) throw Error('이미 Admin임');
+    return this.changeRole(channelInfo, channelInfo.isowner, true);
   }
   // revoke(채널에서 A의 admin 권한을 회수한다.)
   async revoke(ch: Channel, user: User) {
-    const index = ch.users.indexOf(user);
-    if (index !== -1) {
-      ch.users.splice(index, 1);
-    } else {
-      // throw error
-    }
-    ch.users.push(user);
-    return this.channelRepository.save(ch);
+    const channelInfo = await this.channelInfoRepository.findOne({
+      where: { chid: ch.id, userid: user.id },
+    });
+
+    if (!channelInfo.isadmin) throw Error('대상이 Admin이 아닙니다.');
+    return this.changeRole(channelInfo, channelInfo.isowner, false);
+  }
+
+  async changeRole(
+    channelInfo: Channelinfo,
+    isOwner: boolean,
+    isAdmin: boolean,
+  ) {
+    channelInfo.isowner = isOwner;
+    channelInfo.isadmin = isAdmin;
+    return await this.channelInfoRepository.save(channelInfo);
+  }
+
+  async isAdmin(ch: Channel, user: User) {
+    const channelInfo = await this.channelInfoRepository.findOne({
+      where: { chid: ch.id, userid: user.id },
+    });
+    return channelInfo.isadmin;
   }
 
   // 아직 아무것도 안했지만 여기서 암호화를 할것.

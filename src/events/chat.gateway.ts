@@ -134,13 +134,16 @@ export class ChatGateway
     const { userId, roomName } = data;
     console.log('joinChannel: ', userId, ', ', roomName);
     if (!userId || !roomName) return `Error: parameter error`;
+    if (client.rooms.has(roomName))
+      return `Error: 이미 해당 방에 참여중입니다.`;
+
     // join on db level
     // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
     const channel: Channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) throw Error("Channel doesn't exist");
+    if (channel === null) return `Error: Channel doesn't exist`;
     const user: User = await this.userService.findUserById(userId);
     console.log('user: ', user);
-    if (user === null) throw Error("User doesn't exist");
+    if (user === null) return `Error: User doesn't exist`;
     await this.chatService.joinChannel(channel, user, false, false);
     // join on socket level
     client.join(roomName);
@@ -196,5 +199,123 @@ export class ChatGateway
     client.leave(roomname);
     await this.chatService.leftChannel(channel, user);
     return `Success: 채널 ${roomname}에서 클라이언트 ${user.intraid}가 성공적으로 퇴장했습니다.`;
+  }
+
+  // 특정 채널에서 owner를 내 자신에서 이 사람으로 넘깁니다.
+  @SubscribeMessage('delegateChannel')
+  async handleDelegate(@ConnectedSocket() client, @MessageBody() data) {
+    // 인자검사
+    const { roomname, userId } = data;
+    const soketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    if (!roomname || !userId)
+      return `Error: 필요한 인자가 주어지지 않았습니다.`;
+    console.log('delegateChannel event: ', roomname, userId);
+
+    if (!client.rooms.has(roomname))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+
+    const channel = await this.chatService.getChannelByName(roomname);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
+    if (channel.owner.id !== soketUserId)
+      return `Error: 당신은 방장이 아닙니다!`;
+
+    // 핵심 위임로직.
+    await this.chatService.delegate(channel, user);
+
+    this.server
+      .to(roomname)
+      .emit(
+        'chat',
+        `Server🤖: 유저 ${client.id}가 ${roomname}의 새 방장입니다!`,
+      );
+    return `Success: 채널 ${roomname}의 방장 권한을 클라이언트 ${user.intraid}에게 성공적으로 위임했습니다.`;
+  }
+
+  // 특정 채널에서 user에게 admin권한을 부여합니다.
+  @SubscribeMessage('permissionChannel')
+  async handlePermission(@ConnectedSocket() client, @MessageBody() data) {
+    // 인자검사
+    const { roomname, userId } = data;
+    const soketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    if (!roomname || !userId)
+      return `Error: 필요한 인자가 주어지지 않았습니다.`;
+    console.log('permissonChannel event: ', roomname, userId);
+
+    if (!client.rooms.has(roomname))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+
+    const channel = await this.chatService.getChannelByName(roomname);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
+    const socketUser = await this.userService.findUserById(soketUserId);
+
+    // 권한 체크 : admin인가?
+    if (!(await this.chatService.isAdmin(channel, socketUser)))
+      return `Error: 당신은 Admin 권한이 없습니다.`;
+    // 핵심 위임로직.
+    await this.chatService.permission(channel, user);
+
+    this.server
+      .to(roomname)
+      .emit(
+        'chat',
+        `Server🤖: 유저 ${user.nickname}가 ${roomname}의 Admin권한을 획득했습니다!`,
+      );
+    return `Success: 채널 ${roomname}의 Admin 권한을 클라이언트 ${user.intraid}에게 성공적으로 부여했습니다.`;
+  }
+
+  // 특정 채널에서 user에게 admin권한을 회수합니다.
+  @SubscribeMessage('revokeChannel')
+  async handleRevoke(@ConnectedSocket() client, @MessageBody() data) {
+    // 인자검사
+    const { roomname, userId } = data;
+    const soketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    if (!roomname || !userId)
+      return `Error: 필요한 인자가 주어지지 않았습니다.`;
+    console.log('permissonChannel event: ', roomname, userId);
+
+    if (!client.rooms.has(roomname))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+
+    const channel = await this.chatService.getChannelByName(roomname);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
+    const socketUser = await this.userService.findUserById(soketUserId);
+
+    // 권한 체크 : admin인가?
+    if (!(await this.chatService.isAdmin(channel, socketUser)))
+      return `Error: 당신은 Admin 권한이 없습니다.`;
+    // 핵심 위임로직.
+    await this.chatService.revoke(channel, user);
+
+    this.server
+      .to(roomname)
+      .emit(
+        'chat',
+        `Server🤖: 유저 ${user.nickname}가 ${roomname}의 Admin권한을 잃었습니다!`,
+      );
+    client.leave(roomname);
+    await this.chatService.leftChannel(channel, user);
+    return `Success: 채널 ${roomname}의 Admin 권한을 클라이언트 ${user.nickname}에게서 회수했습니다.`;
+  }
+
+  // 특정 채널에서 user에게 admin권한을 회수합니다.
+  @SubscribeMessage('sampleEvent')
+  async sampleEvent(@ConnectedSocket() client, @MessageBody() data) {
+    const response = { event: 'foo', data: 'bar' };
+    return response;
   }
 }
