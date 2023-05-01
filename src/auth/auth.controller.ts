@@ -72,6 +72,8 @@ export class AuthController {
       if (firstFlag == true) {
         //intraID 쿠키 값 설정
         res.cookie('nickname', result.intraid);
+        console.log('userData json: ', JSON.stringify(result));
+        res.cookie('userData', JSON.stringify(result));
 
         //리디렉션 join 설정
         redirectURL = 'http://localhost:3001/join';
