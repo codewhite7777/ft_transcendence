@@ -30,18 +30,30 @@ export class ChatGateway
   @WebSocketServer()
   server: Server;
 
+  // string말고 유저에 대한 정보 ex) socketId, status
+  usMapper: Map<number, string>; // userId = 1, socketid=x
+
   constructor(
     private readonly chatService: ChatService,
     private readonly userService: UserService,
-  ) {}
+  ) {
+    this.usMapper = new Map<number, string>();
+  }
 
   afterInit(server: Server) {
     console.log('Chat Socket initialized');
   }
 
   handleConnection(client: any, ...args: any[]) {
-    console.log(`Chat Client connected: ${client.id}`);
-    //console.log('Chat Client connected: ', client);
+    console.log(
+      `Chat Client connected: ${client.id}: `,
+      client?.handshake?.userid,
+    );
+    //console.log('client.handshake.userid: ', client?.handshake?.headers?.userid);
+    const userId: number = parseInt(client?.handshake?.headers?.userid, 10);
+    console.log(userId);
+    //if (userId) this.usMapper.set(userId, client.id);
+    if (userId) this.usMapper.set(userId, client.id);
   }
 
   // 누가 disconnect했는지 어떻게 알지?
@@ -169,7 +181,12 @@ export class ChatGateway
       // num: this.server.sockets.adapter.rooms.get(roomName).size,
       num: 10,
       roomName,
+      users: channel.channelinfos.map((user) => ({
+        ...user,
+        socketId: this.usMapper.get(user.userid),
+      })),
     };
+    console.log('welcomeData: ', welcomeData);
     this.server.to(roomName).emit('welcome', welcomeData);
   }
 
