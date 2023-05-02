@@ -54,6 +54,7 @@ export class ChatGateway
   }
 
   // Todo 클라이언트가 어떤 유저인지 파악하고, 해당 유저가 db상으로 참여한 방을 찾은후 입장시켜야 한다.
+  // 입장시켰고, 입장한 채널info 목록을 프론트에게 전달해야 한다.
   async handleConnection(client: any, ...args: any[]) {
     console.log(
       `Chat Client connected: ${client.id}: `,
@@ -165,6 +166,7 @@ export class ChatGateway
       kind,
       client.userId,
       roomName,
+      roomPassword,
     );
 
     // 방장을 참여.
