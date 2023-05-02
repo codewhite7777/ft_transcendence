@@ -5,6 +5,7 @@ import { Friendlist } from './typeorm/entities/Friendlist';
 import { Matchhistory } from './typeorm/entities/Matchhistory';
 import { User } from './typeorm/entities/User';
 import { Userblacklist } from './typeorm/entities/Userblacklist';
+import { channelBlacklist } from './typeorm/entities/ChannelBlacklist';
 
 export const databaseProviders = [
   {
@@ -27,6 +28,7 @@ export const databaseProviders = [
           Friendlist,
           Matchhistory,
           Userblacklist,
+          channelBlacklist,
         ],
       });
       return dataSource.initialize();
