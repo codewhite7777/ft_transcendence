@@ -16,7 +16,7 @@ export class MatchhistoryService {
     const userData = await this.userService.findUserByID(myID);
     const matchList = await this.matchHistoryRepository.find({
       relations: { loser: true, winner: true },
-      where: [{ winner: userData }, { loser: userData }],
+      where: [{ winner: { id: userData.id } }, { loser: { id: userData.id } }],
       order: { id: 'DESC' },
       take: 5,
     });
