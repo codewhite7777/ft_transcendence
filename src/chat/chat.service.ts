@@ -4,6 +4,7 @@ import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import { User } from '../typeorm/entities/User';
 import { Repository } from 'typeorm';
 import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ChatService {
@@ -41,8 +42,8 @@ export class ChatService {
     newChannel.roomname = roomname;
     newChannel.users = [];
     newChannel.channelinfos = [];
-    if (roomPassword)
-      newChannel.roompassword = this.encryptPassword(roomPassword);
+    if (roomPassword !== undefined)
+      newChannel.roompassword = await this.encryptPassword(roomPassword);
     return this.channelRepository.save(newChannel);
   }
 
@@ -229,8 +230,8 @@ export class ChatService {
     // socket상으로 막는다.
   }
 
-  // 아직 아무것도 안했지만 여기서 암호화를 할것.
-  encryptPassword(password: string) {
-    return password;
+  async encryptPassword(password: string) {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
   }
 }

@@ -18,6 +18,7 @@ import { CreateChannelValidationPipe } from './chat.pipe';
 import { UseFilters } from '@nestjs/common';
 import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
 import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
+import * as bcrypt from 'bcrypt';
 
 // 이 설정들이 뭘하는건지, 애초에 무슨 레포를 보고 이것들을 찾을 수 있는지 전혀 모르겠다.
 @WebSocketGateway(4242, {
@@ -229,7 +230,7 @@ export class ChatGateway
   // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
   async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
-    const { userId, roomName } = data;
+    const { userId, roomName, roomPassword } = data;
     console.log('joinChannel: ', userId, ', ', roomName);
     if (!userId || !roomName) return `Error: parameter error`;
     if (client.rooms.has(roomName))
@@ -244,6 +245,12 @@ export class ChatGateway
 
     if (this.chatService.isBanned(channel, user))
       return `Error: 당신은 해당 채널에서 Ban 당했습니다.`;
+
+    if (channel.kind === 1) {
+      if (roomPassword === undefined) return `Error: parameter error`;
+      if (!(await bcrypt.compare(roomPassword, channel.roompassword)))
+        return `Error: Wrong password`;
+    }
 
     await this.chatService.joinChannel(channel, user, false, false);
     // join on socket level
