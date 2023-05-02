@@ -97,7 +97,7 @@ export class ChatService {
   }
   // 비밀번호 암호화 로직을 넣어야 함...!
   async updatePassword(channel: Channel, password: string) {
-    channel.roompassword = this.encryptPassword(password);
+    channel.roompassword = await this.encryptPassword(password);
     return this.channelRepository.save(channel);
   }
   async updateKind(channel: Channel, kind: number) {
