@@ -160,8 +160,6 @@ export class ChatGateway
     if (user == null)
       return this.createErrorEventResponse(`당신의 회원정보가 없습니다!`);
 
-    // 채널 생성(중복검사 yes)
-    // Todo. 비밀번호가 있는 채널을 생성할때는 어떻게 할까?
     const newChannel: Channel = await this.chatService.createChannel(
       kind,
       client.userId,
@@ -204,8 +202,6 @@ export class ChatGateway
     //return channels;
   }
 
-  // socket의 메시지를 room내부의 모든 이들에게 전달합니다.
-  // Todo. user가 채널에서 mute상태인지 확인합니다.
   /*
   data = {
     "message": "hello world!",
@@ -229,7 +225,6 @@ export class ChatGateway
   }
 
   // socket을 특정 room에 join 시킵니다.
-  // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
   async handleJoin(
     @ConnectedSocket() client,
@@ -242,7 +237,6 @@ export class ChatGateway
       return `Error: 이미 해당 방에 참여중입니다.`;
 
     // join on db level
-    // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
     const channel: Channel = await this.chatService.getChannelByName(roomName);
     if (channel === null) return `Error: Channel doesn't exist`;
     const user: User = await this.userService.findUserById(userId);
@@ -264,7 +258,6 @@ export class ChatGateway
     // 입장한 유저한테 어떤 정보를 제시할 것인가?
     /*
       1. Channel에 포함된 유저 목록(db, socket)
-      Todo. channel.channelinfo를 보낼건데, socketid도 포함시켜서 보내기.
       const roomClientsCount = io.sockets.adapter.rooms.get(roomName)?.size || 0;
     */
     const welcomeData = {
