@@ -13,7 +13,8 @@ import { UserblacklistModule } from './userblacklist/userblacklist.module';
 import { MatchhistoryModule } from './matchhistory/matchhistory.module';
 import { EventsModule } from './events/events.module';
 import * as fs from 'fs';
-import { MulterModule } from '@nestjs/platform-express';
+import { UploadsModule } from './uploads/uploads.module';
+import { UploadsService } from './uploads/uploads.service';
 
 @Module({
   imports: [
@@ -28,9 +29,10 @@ import { MulterModule } from '@nestjs/platform-express';
     FriendlistModule,
     UserblacklistModule,
     MatchhistoryModule,
+    UploadsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, UploadsService],
 })
 export class AppModule {
   constructor() {
