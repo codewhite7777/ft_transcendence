@@ -12,6 +12,8 @@ import { FriendlistModule } from './friendlist/friendlist.module';
 import { UserblacklistModule } from './userblacklist/userblacklist.module';
 import { MatchhistoryModule } from './matchhistory/matchhistory.module';
 import { EventsModule } from './events/events.module';
+import * as fs from 'fs';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
@@ -30,4 +32,11 @@ import { EventsModule } from './events/events.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  constructor() {
+    const uploadDir = './uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+  }
+}
