@@ -14,7 +14,7 @@ import { MatchhistoryModule } from './matchhistory/matchhistory.module';
 import { EventsModule } from './events/events.module';
 import * as fs from 'fs';
 import { UploadsModule } from './uploads/uploads.module';
-import { UploadsService } from './uploads/uploads.service';
+import UploadsService from './uploads/uploads.service';
 
 @Module({
   imports: [
