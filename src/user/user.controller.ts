@@ -10,7 +10,7 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { CookieService } from 'src/cookie/cookie.service';
+import { CookieService } from '../cookie/cookie.service';
 import { UserService } from './user.service';
 import { Request } from 'express';
 

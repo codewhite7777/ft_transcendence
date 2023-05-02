@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Channel } from 'src/typeorm/entities/Channel';
-import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
-import { User } from 'src/typeorm/entities/User';
+import { Channel } from '../typeorm/entities/Channel';
+import { Channelinfo } from '../typeorm/entities/Channelinfo';
+import { User } from '../typeorm/entities/User';
 import { Repository } from 'typeorm';
+import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ChatService {
@@ -11,6 +13,8 @@ export class ChatService {
     private channelRepository: Repository<Channel>,
     @Inject('CHANNELINFO_REPOSITORY')
     private channelInfoRepository: Repository<Channelinfo>,
+    @Inject('CHANNELBLACKLIST_REPOSITORY')
+    private channelBlacklistRepository: Repository<channelBlacklist>,
     @Inject('USER_REPOSITORY')
     private userRepository: Repository<User>,
   ) {}
@@ -38,8 +42,8 @@ export class ChatService {
     newChannel.roomname = roomname;
     newChannel.users = [];
     newChannel.channelinfos = [];
-    if (roomPassword)
-      newChannel.roompassword = this.encryptPassword(roomPassword);
+    if (roomPassword !== undefined)
+      newChannel.roompassword = await this.encryptPassword(roomPassword);
     return this.channelRepository.save(newChannel);
   }
 
@@ -68,6 +72,13 @@ export class ChatService {
     });
   }
 
+  async getChannelInfoByUser(userId: number) {
+    return this.channelInfoRepository.find({
+      where: { userid: userId },
+      relations: { ch: true },
+    });
+  }
+
   // update channel -> 무엇을 바꾸느냐에 따라 함수를 쪼개야 할듯...
   async updateChannel(
     channel: Channel,
@@ -86,7 +97,7 @@ export class ChatService {
   }
   // 비밀번호 암호화 로직을 넣어야 함...!
   async updatePassword(channel: Channel, password: string) {
-    channel.roompassword = this.encryptPassword(password);
+    channel.roompassword = await this.encryptPassword(password);
     return this.channelRepository.save(channel);
   }
   async updateKind(channel: Channel, kind: number) {
@@ -113,12 +124,6 @@ export class ChatService {
     isOwner: boolean,
     isAdmin: boolean,
   ) {
-    console.log('channel, user = ', channel, user);
-    //console.log('channel.users: ', channel.users);
-
-    // logic
-    //channel.users.push(user);
-
     const newChannelinfos = this.channelInfoRepository.create();
     newChannelinfos.chid = channel.id;
     newChannelinfos.userid = user.id;
@@ -127,9 +132,8 @@ export class ChatService {
     // newChannelinfos를 save하지 않아도 괜찮은걸까? => save안하면 db에서 발견이 되지 않는다...
     await this.channelInfoRepository.save(newChannelinfos);
     channel.channelinfos.push(newChannelinfos);
-
     const updatedChannel = await this.channelRepository.save(channel);
-    console.log('updatedChannel: ', updatedChannel);
+    //console.log('updatedChannel: ', updatedChannel);
   }
 
   // left channel(누가, 어디채팅방에서 나간다)
@@ -199,8 +203,35 @@ export class ChatService {
     return channelInfo.isadmin;
   }
 
-  // 아직 아무것도 안했지만 여기서 암호화를 할것.
-  encryptPassword(password: string) {
-    return password;
+  async isBanned(ch: Channel, user: User) {
+    const channelBlacklist: channelBlacklist =
+      await this.channelBlacklistRepository.findOne({
+        where: { channelId: ch.id, userId: user.id },
+      });
+
+    return !(channelBlacklist === null);
+  }
+
+  async kick() {
+    console.log('kick service');
+  }
+  async mute() {
+    console.log('mute service');
+  }
+  async ban(ch: Channel, user: User) {
+    console.log('ban service');
+
+    const channelBlackList = await this.channelBlacklistRepository.create();
+    channelBlackList.channelId = ch.id;
+    channelBlackList.userId = user.id;
+    const ret = this.channelBlacklistRepository.save(channelBlackList);
+    // ret으로 잘 생성되었는지 확인한다.
+
+    // socket상으로 막는다.
+  }
+
+  async encryptPassword(password: string) {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
   }
 }

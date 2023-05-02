@@ -9,8 +9,8 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { CookieService } from 'src/cookie/cookie.service';
-import { UserService } from 'src/user/user.service';
+import { CookieService } from '../cookie/cookie.service';
+import { UserService } from '../user/user.service';
 import { UserblacklistService } from './userblacklist.service';
 
 @Controller('/userblacklist')

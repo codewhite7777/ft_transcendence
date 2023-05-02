@@ -1,5 +1,6 @@
-import { Channel } from 'src/typeorm/entities/Channel';
-import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
+import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
+import { Channel } from '../typeorm/entities/Channel';
+import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import { DataSource } from 'typeorm';
 
 export const chatProviders = [
@@ -12,6 +13,12 @@ export const chatProviders = [
     provide: 'CHANNELINFO_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
       dataSource.getRepository(Channelinfo),
+    inject: ['DATA_SOURCE'],
+  },
+  {
+    provide: 'CHANNELBLACKLIST_REPOSITORY',
+    useFactory: (dataSource: DataSource) =>
+      dataSource.getRepository(channelBlacklist),
     inject: ['DATA_SOURCE'],
   },
 ];
