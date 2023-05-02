@@ -8,8 +8,8 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { CookieService } from 'src/cookie/cookie.service';
-import { UserService } from 'src/user/user.service';
+import { CookieService } from '../cookie/cookie.service';
+import { UserService } from '../user/user.service';
 import { MatchhistoryService } from './matchhistory.service';
 import { Request } from 'express';
 
@@ -27,7 +27,7 @@ export class MatchhistoryController {
     const min = 1;
     const max = 10;
     const randomInt = Math.floor(Math.random() * (max - min + 1)) + min;
-    const client1 = await this.userService.findUser('alee');
+    const client1 = await this.userService.findUser('gshim');
     const client2 = await this.userService.findUser('hena');
     await this.matchhistoryService.createMatchHistory(
       Math.floor(Math.random() * (1 - 0 + 1)) + 0,

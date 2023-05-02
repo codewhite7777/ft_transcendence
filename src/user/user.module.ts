@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CookieService } from 'src/cookie/cookie.service';
-import { DatabaseModule } from 'src/database.module';
+import { CookieService } from '../cookie/cookie.service';
+import { DatabaseModule } from '../database.module';
 import { UserController } from './user.controller';
 import { userProviders } from './user.providers';
 import { UserService } from './user.service';
