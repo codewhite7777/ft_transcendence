@@ -14,11 +14,12 @@ import { Channel } from '../typeorm/entities/Channel';
 import { User } from '../typeorm/entities/User';
 import { UserService } from '../user/user.service';
 import { EventResponse } from './eventResponse.interface';
-import { CreateChannelValidationPipe } from './chat.pipe';
+import { CreateChannelValidationPipe } from '../pipes/chat.pipe';
 import { UseFilters } from '@nestjs/common';
 import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
 import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
 import * as bcrypt from 'bcrypt';
+import { ChannelValidationPipe } from 'src/pipes/chat.pipe';
 
 // 이 설정들이 뭘하는건지, 애초에 무슨 레포를 보고 이것들을 찾을 수 있는지 전혀 모르겠다.
 @WebSocketGateway(4242, {
@@ -142,7 +143,6 @@ export class ChatGateway
     }
   */
   @SubscribeMessage('createChannel')
-  @UseFilters(SocketParameterValidationExceptionFilter)
   async createChannel(
     @ConnectedSocket() client,
     @MessageBody(CreateChannelValidationPipe) data,
@@ -229,7 +229,10 @@ export class ChatGateway
   // socket을 특정 room에 join 시킵니다.
   // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
-  async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
+  async handleJoin(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     const { userId, roomName, roomPassword } = data;
     console.log('joinChannel: ', userId, ', ', roomName);
     if (!userId || !roomName) return `Error: parameter error`;
@@ -275,7 +278,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('leftChannel')
-  async handleLeft(@ConnectedSocket() client, @MessageBody() data) {
+  async handleLeft(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     const { roomname, userId } = data;
     if (!roomname || !userId)
       return `Error: 필요한 인자가 주어지지 않았습니다.`;
@@ -309,7 +315,10 @@ export class ChatGateway
     });
   */
   @SubscribeMessage('delegateChannel')
-  async handleDelegate(@ConnectedSocket() client, @MessageBody() data) {
+  async handleDelegate(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -344,7 +353,10 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 부여합니다.
   @SubscribeMessage('permissionChannel')
-  async handlePermission(@ConnectedSocket() client, @MessageBody() data) {
+  async handlePermission(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -381,7 +393,10 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 회수합니다.
   @SubscribeMessage('revokeChannel')
-  async handleRevoke(@ConnectedSocket() client, @MessageBody() data) {
+  async handleRevoke(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -444,7 +459,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('ban')
-  async handleBan(@ConnectedSocket() client, @MessageBody() data) {
+  async handleBan(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     if (!roomname || !userId)
@@ -480,7 +498,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('kick')
-  async handleKick(@ConnectedSocket() client, @MessageBody() data) {
+  async handleKick(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     if (!roomname || !userId)

@@ -19,3 +19,17 @@ export class CreateChannelValidationPipe implements PipeTransform {
     return value;
   }
 }
+
+@Injectable()
+export class ChannelValidationPipe implements PipeTransform {
+  transform(value: any): any {
+    console.log('ChannelValidationPipe: ', value);
+    const { userId, roomName } = value;
+    if (userId === undefined || roomName === undefined) {
+      throw new BadRequestException(
+        'Parameter error: userId and roomName are required.',
+      );
+    }
+    return value;
+  }
+}
