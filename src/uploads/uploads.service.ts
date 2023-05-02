@@ -14,10 +14,22 @@ export default class UploadsService {
     }
 
     //로컬 파일 확인
-    isLocalFileExist(userData: User) {
+    async isLocalFileExist(userData: User) {
         const avatarUrl: string = userData.avatar;
-        if (avatarUrl.includes('./uploads')) return true;
-        return false;
+
+        if (avatarUrl.includes('./uploads'))
+        {
+            const fs = require('fs');
+            try {
+                await fs.accessSync(avatarUrl, fs.constants.F_OK);
+                if (avatarUrl.includes('./uploads')) return true;
+                return true;
+              } catch (error) {
+                return false;
+              }
+        }
+        else
+            return false;
     }
 
     //파일 삭제

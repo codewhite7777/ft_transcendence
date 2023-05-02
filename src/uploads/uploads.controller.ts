@@ -23,8 +23,8 @@ export class UploadsController {
     const userData = await this.userService.findUser('hena');//TODO : 쿠키 값으로 유저 찾기
     // console.log(`userData.avatar : ${userData.avatar}`);
     const fileDir = `./uploads/${file.originalname}`;
-    const isFileExist = this.uploadsService.isLocalFileExist(userData);
-    // console.log(`파일 저장 여부 : ${isFileExist}`);
+    const isFileExist = await this.uploadsService.isLocalFileExist(userData);
+    console.log(`로컬 파일 저장 여부 : ${isFileExist}`);
     if (isFileExist)
         await this.uploadsService.deleteFile(userData.avatar);
     await this.userService.updateURL(userData.intraid, fileDir);
