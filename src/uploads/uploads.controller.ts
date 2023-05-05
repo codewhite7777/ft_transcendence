@@ -26,12 +26,13 @@ export class UploadsController {
     const fileRet = await this.uploadsService.saveFile(file);
     const userData = await this.userService.findUser(target);
     // console.log(`userData.avatar : ${userData.avatar}`);
-    const fileDir = `./uploads/${file.originalname}`;
+    const fileDir = `/uploads/${file.originalname}`;
     const isFileExist = await this.uploadsService.isLocalFileExist(userData);
     console.log(`로컬 파일 저장 여부 : ${isFileExist}`);
     if (isFileExist)
         await this.uploadsService.deleteFile(userData.avatar);
+    const localPath = 'http://localhost:3000' + userData.avatar;
     await this.userService.updateURL(userData.intraid, fileDir);
-    return { message: '파일이 저장되었습니다.', url : userData.avatar };
+    return { message: '파일이 저장되었습니다.', url : localPath };
   }
 }
