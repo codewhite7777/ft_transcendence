@@ -32,6 +32,6 @@ export class UploadsController {
     if (isFileExist)
         await this.uploadsService.deleteFile(userData.avatar);
     await this.userService.updateURL(userData.intraid, fileDir);
-    return { message: '파일이 저장되었습니다.' };
+    return { message: '파일이 저장되었습니다.', url : userData.avatar };
   }
 }
