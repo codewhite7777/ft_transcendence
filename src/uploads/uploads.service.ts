@@ -20,8 +20,14 @@ export default class UploadsService {
         if (avatarUrl.includes('./uploads'))
         {
             const fs = require('fs');
-            await fs.accessSync(avatarUrl, fs.constants.F_OK);
-            if (avatarUrl.includes('./uploads')) return true;
+            try{
+                await fs.accessSync(avatarUrl, fs.constants.F_OK);
+                return true;
+            }
+            catch(err)
+            {
+                return false;
+            }
         }
         return false;
     }
