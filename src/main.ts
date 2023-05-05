@@ -16,8 +16,7 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,
   });
-  const uploadsPath = path.resolve(__dirname, 'uploads');
-  app.use('/uploads', express.static(uploadsPath));
+  app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
   await app.listen(3000);
 }
 bootstrap();
