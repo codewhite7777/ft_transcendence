@@ -27,7 +27,7 @@ export class MatchhistoryController {
     const min = 1;
     const max = 10;
     const randomInt = Math.floor(Math.random() * (max - min + 1)) + min;
-    const client1 = await this.userService.findUser('gshim');
+    const client1 = await this.userService.findUser('alee');
     const client2 = await this.userService.findUser('hena');
     await this.matchhistoryService.createMatchHistory(
       Math.floor(Math.random() * (1 - 0 + 1)) + 0,
@@ -53,15 +53,45 @@ export class MatchhistoryController {
   //     return result;
   //     }
 
+  // {
+  //   "id": 3,
+  //   "status": 0,
+  //   "mapnumber": 0,
+  //   "winscore": 1,
+  //   "losescore": 5,
+  //   "loser": {
+  //     "id": 7,
+  //     "intraid": "hena",
+  //     "avatar": "https://cdn.intra.42.fr/users/883eeb737203deda9887c8683b7d6f9f/hena.jpg",
+  //     "nickname": "anon_7",
+  //     "rating": 1200,
+  //     "wincount": 0,
+  //     "losecount": 0,
+  //     "email": "hena@student.42seoul.kr",
+  //     "isotp": false
+  //   },
+  //   "winner": {
+  //     "id": 6,
+  //     "intraid": "alee",
+  //     "avatar": "http://localhost:3000/uploads/nest_logo.jpeg",
+  //     "nickname": "alee",
+  //     "rating": 1200,
+  //     "wincount": 0,
+  //     "losecount": 0,
+  //     "email": "alee@student.42seoul.kr",
+  //     "isotp": false
+  //   }
+  // }
   @Get(':id')
   async getMatchHistoryList(@Param('id') intraID: string, @Req() req: Request) {
     //debug
     console.log('[매치 히스토리 요청]');
-    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
-    if (cookie == undefined) throw new NotFoundException('cookie not found');
+    // const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
+    // if (cookie == undefined) throw new NotFoundException('cookie not found');
     const userData = await this.userService.findUser(intraID);
     if (userData == null) throw new NotFoundException(`client not found.`);
     const result = await this.matchhistoryService.getMatchHistory(userData.id);
+    console.log(result);
     return result;
   }
 
