@@ -31,8 +31,8 @@ export class UploadsController {
     console.log(`로컬 파일 저장 여부 : ${isFileExist}`);
     if (isFileExist)
         await this.uploadsService.deleteFile(userData.avatar);
-    const localPath = 'http://localhost:3000' + userData.avatar;
     await this.userService.updateURL(userData.intraid, fileDir);
+    const localPath = 'http://localhost:3000' + userData.avatar;
     return { message: '파일이 저장되었습니다.', url : localPath };
   }
 }
