@@ -20,16 +20,10 @@ export default class UploadsService {
         if (avatarUrl.includes('./uploads'))
         {
             const fs = require('fs');
-            try {
-                await fs.accessSync(avatarUrl, fs.constants.F_OK);
-                if (avatarUrl.includes('./uploads')) return true;
-                return true;
-              } catch (error) {
-                return false;
-              }
+            await fs.accessSync(avatarUrl, fs.constants.F_OK);
+            if (avatarUrl.includes('./uploads')) return true;
         }
-        else
-            return false;
+        return false;
     }
 
     //파일 삭제

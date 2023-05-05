@@ -1,9 +1,10 @@
-import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, NotFoundException, Post, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createWriteStream } from 'fs';
 import UploadsService from './uploads.service';
 import { UserService } from 'src/user/user.service';
 import { CookieService } from 'src/cookie/cookie.service';
+import { Request } from 'express';
 
 @Controller('/uploads')
 export class UploadsController {
@@ -18,9 +19,12 @@ export class UploadsController {
     //}
   @Post()
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File,  @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
+    if (cookie == undefined) throw new NotFoundException('cookie not found');
+    const target = this.userService.getIntraID(cookie);
     const fileRet = await this.uploadsService.saveFile(file);
-    const userData = await this.userService.findUser('hena');//TODO : 쿠키 값으로 유저 찾기
+    const userData = await this.userService.findUser(target);
     // console.log(`userData.avatar : ${userData.avatar}`);
     const fileDir = `./uploads/${file.originalname}`;
     const isFileExist = await this.uploadsService.isLocalFileExist(userData);
