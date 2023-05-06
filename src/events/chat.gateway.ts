@@ -75,17 +75,22 @@ export class ChatGateway
         client.join(channel.ch.roomname);
       });
 
-      const channelswithSocketId = channels.map((channel) =>
-        channel.ch.channelinfos.map((channelinfo) => ({
-          ...channelinfo,
-          // id: channelinfo.ch.id,
-          // name: channelinfo.ch.roomname,
-          user: {
-            ...channelinfo.user,
-            socketId: this.usMapper.get(channelinfo.userid),
-          },
+      // made by gpt 🤖
+      const channelswithSocketId = channels.map((channel) => ({
+        id: channel.ch.id,
+        name: channel.ch.roomname,
+        users: channel.ch.channelinfos.map((channelinfo) => ({
+          id: channelinfo.user.id,
+          nickname: channelinfo.user.nickname,
+          intraId: channelinfo.user.intraid,
+          socketId: this.usMapper.get(channelinfo.userid),
+          avatar: channelinfo.user.avatar,
+          status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
+          isOwner: channelinfo.isowner,
+          isAdmin: channelinfo.isadmin,
         })),
-      );
+        showUserList: false,
+      }));
 
       client.emit(
         'initChannels',
