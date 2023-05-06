@@ -50,7 +50,7 @@ export class User {
   @OneToMany(() => Channel, (channel) => channel.owner)
   channels: Channel[];
 
-  @ManyToMany(() => Channel, (channel) => channel.users)
+  @ManyToMany(() => Channel, (channel) => channel.users2) // ?
   channels2: Channel[];
 
   @OneToMany(() => Channelinfo, (channelinfo) => channelinfo.user)

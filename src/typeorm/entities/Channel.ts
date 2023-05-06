@@ -45,7 +45,7 @@ export class Channel {
     inverseJoinColumns: [{ name: 'userid', referencedColumnName: 'id' }],
     schema: 'public',
   })
-  users: User[];
+  users2: User[];
 
   @OneToMany(() => Channelinfo, (channelinfo) => channelinfo.ch)
   channelinfos: Channelinfo[];
