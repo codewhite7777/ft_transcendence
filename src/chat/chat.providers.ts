@@ -21,4 +21,10 @@ export const chatProviders = [
       dataSource.getRepository(channelBlacklist),
     inject: ['DATA_SOURCE'],
   },
+  {
+    provide: 'FRIENDLIST_REPOSITORY',
+    useFactory: (dataSource: DataSource) =>
+      dataSource.getRepository(channelBlacklist),
+    inject: ['DATA_SOURCE'],
+  },
 ];
