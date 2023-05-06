@@ -4,6 +4,8 @@ import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import { User } from '../typeorm/entities/User';
 import { Repository } from 'typeorm';
 import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
+import * as bcrypt from 'bcrypt';
+import { Friendlist } from 'src/typeorm/entities/Friendlist';
 
 @Injectable()
 export class ChatService {
@@ -16,6 +18,8 @@ export class ChatService {
     private channelBlacklistRepository: Repository<channelBlacklist>,
     @Inject('USER_REPOSITORY')
     private userRepository: Repository<User>,
+    @Inject('FRIENDLIST_REPOSITORY')
+    private friendListRepository: Repository<Friendlist>,
   ) {}
 
   // create channel(종류, ownner, 제목, 비번)
@@ -41,8 +45,13 @@ export class ChatService {
     newChannel.roomname = roomname;
     newChannel.users = [];
     newChannel.channelinfos = [];
-    if (roomPassword)
-      newChannel.roompassword = this.encryptPassword(roomPassword);
+    // 비밀번호가 정의된 경우
+    if (roomPassword.length != 0) {
+      console.log('password: ', roomPassword);
+      console.log('password: ', roomPassword.length);
+      newChannel.roompassword = await this.encryptPassword(roomPassword);
+      console.log('password: ', newChannel.roompassword);
+    }
     return this.channelRepository.save(newChannel);
   }
 
@@ -232,5 +241,14 @@ export class ChatService {
   // 아직 아무것도 안했지만 여기서 암호화를 할것.
   encryptPassword(password: string) {
     return password;
+  }
+
+  async getFriend(_userId: number) {
+    return await this.friendListRepository.find({
+      where: {
+        userId2: _userId,
+      },
+      relations: { userId: true },
+    });
   }
 }
