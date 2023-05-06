@@ -14,12 +14,10 @@ import { Channel } from '../typeorm/entities/Channel';
 import { User } from '../typeorm/entities/User';
 import { UserService } from '../user/user.service';
 import { EventResponse } from './eventResponse.interface';
-import { CreateChannelValidationPipe } from '../pipes/chat.pipe';
+import { CreateChannelValidationPipe } from './chat.pipe';
 import { UseFilters } from '@nestjs/common';
 import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
 import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
-import * as bcrypt from 'bcrypt';
-import { ChannelValidationPipe } from 'src/pipes/chat.pipe';
 
 // 이 설정들이 뭘하는건지, 애초에 무슨 레포를 보고 이것들을 찾을 수 있는지 전혀 모르겠다.
 @WebSocketGateway(4242, {
@@ -54,7 +52,6 @@ export class ChatGateway
   }
 
   // Todo 클라이언트가 어떤 유저인지 파악하고, 해당 유저가 db상으로 참여한 방을 찾은후 입장시켜야 한다.
-  // 입장시켰고, 입장한 채널info 목록을 프론트에게 전달해야 한다.
   async handleConnection(client: any, ...args: any[]) {
     console.log(
       `Chat Client connected: ${client.id}: `,
@@ -144,6 +141,7 @@ export class ChatGateway
     }
   */
   @SubscribeMessage('createChannel')
+  @UseFilters(SocketParameterValidationExceptionFilter)
   async createChannel(
     @ConnectedSocket() client,
     @MessageBody(CreateChannelValidationPipe) data,
@@ -160,11 +158,12 @@ export class ChatGateway
     if (user == null)
       return this.createErrorEventResponse(`당신의 회원정보가 없습니다!`);
 
+    // 채널 생성(중복검사 yes)
+    // Todo. 비밀번호가 있는 채널을 생성할때는 어떻게 할까?
     const newChannel: Channel = await this.chatService.createChannel(
       kind,
       client.userId,
       roomName,
-      roomPassword,
     );
 
     // 방장을 참여.
@@ -202,6 +201,8 @@ export class ChatGateway
     //return channels;
   }
 
+  // socket의 메시지를 room내부의 모든 이들에게 전달합니다.
+  // Todo. user가 채널에서 mute상태인지 확인합니다.
   /*
   data = {
     "message": "hello world!",
@@ -225,18 +226,17 @@ export class ChatGateway
   }
 
   // socket을 특정 room에 join 시킵니다.
+  // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
-  async handleJoin(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
-    const { userId, roomName, roomPassword } = data;
+  async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
+    const { userId, roomName } = data;
     console.log('joinChannel: ', userId, ', ', roomName);
     if (!userId || !roomName) return `Error: parameter error`;
     if (client.rooms.has(roomName))
       return `Error: 이미 해당 방에 참여중입니다.`;
 
     // join on db level
+    // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
     const channel: Channel = await this.chatService.getChannelByName(roomName);
     if (channel === null) return `Error: Channel doesn't exist`;
     const user: User = await this.userService.findUserById(userId);
@@ -245,12 +245,6 @@ export class ChatGateway
     if (this.chatService.isBanned(channel, user))
       return `Error: 당신은 해당 채널에서 Ban 당했습니다.`;
 
-    if (channel.kind === 1) {
-      if (roomPassword === undefined) return `Error: parameter error`;
-      if (!(await bcrypt.compare(roomPassword, channel.roompassword)))
-        return `Error: Wrong password`;
-    }
-
     await this.chatService.joinChannel(channel, user, false, false);
     // join on socket level
     client.join(roomName);
@@ -258,6 +252,7 @@ export class ChatGateway
     // 입장한 유저한테 어떤 정보를 제시할 것인가?
     /*
       1. Channel에 포함된 유저 목록(db, socket)
+      Todo. channel.channelinfo를 보낼건데, socketid도 포함시켜서 보내기.
       const roomClientsCount = io.sockets.adapter.rooms.get(roomName)?.size || 0;
     */
     const welcomeData = {
@@ -273,10 +268,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('leftChannel')
-  async handleLeft(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
+  async handleLeft(@ConnectedSocket() client, @MessageBody() data) {
     const { roomname, userId } = data;
     if (!roomname || !userId)
       return `Error: 필요한 인자가 주어지지 않았습니다.`;
@@ -310,10 +302,7 @@ export class ChatGateway
     });
   */
   @SubscribeMessage('delegateChannel')
-  async handleDelegate(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
+  async handleDelegate(@ConnectedSocket() client, @MessageBody() data) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -348,10 +337,7 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 부여합니다.
   @SubscribeMessage('permissionChannel')
-  async handlePermission(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
+  async handlePermission(@ConnectedSocket() client, @MessageBody() data) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -388,10 +374,7 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 회수합니다.
   @SubscribeMessage('revokeChannel')
-  async handleRevoke(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
+  async handleRevoke(@ConnectedSocket() client, @MessageBody() data) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -454,10 +437,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('ban')
-  async handleBan(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
+  async handleBan(@ConnectedSocket() client, @MessageBody() data) {
     // 인자검사
     const { roomname, userId } = data;
     if (!roomname || !userId)
@@ -493,10 +473,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('kick')
-  async handleKick(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
+  async handleKick(@ConnectedSocket() client, @MessageBody() data) {
     // 인자검사
     const { roomname, userId } = data;
     if (!roomname || !userId)
