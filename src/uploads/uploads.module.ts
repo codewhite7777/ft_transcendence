@@ -9,9 +9,7 @@ import { CookieService } from 'src/cookie/cookie.service';
 @Module({
   imports: [DatabaseModule],
   controllers: [UploadsController],
-  providers: [UploadsService,UserService, ...userProviders, CookieService],
+  providers: [UploadsService, UserService, ...userProviders, CookieService],
   exports: [UserService, ...userProviders],
-
 })
 export class UploadsModule {}
-
