@@ -43,7 +43,7 @@ export class ChatService {
       where: { id: owner },
     });
     newChannel.roomname = roomname;
-    newChannel.users = [];
+    newChannel.users2 = [];
     newChannel.channelinfos = [];
     // 비밀번호가 정의된 경우
     if (roomPassword.length != 0) {
@@ -80,10 +80,18 @@ export class ChatService {
     });
   }
 
+  //channels.ch. foreach...
+  // channelinfos
   async getChannelInfoByUser(userId: number) {
     return this.channelInfoRepository.find({
       where: { userid: userId },
-      relations: { ch: true },
+      relations: {
+        ch: {
+          channelinfos: {
+            user: true,
+          },
+        },
+      },
     });
   }
 
@@ -216,7 +224,7 @@ export class ChatService {
       await this.channelBlacklistRepository.findOne({
         where: { channelId: ch.id, userId: user.id },
       });
-
+      console.log('isBanned] channelBlacklist: ', channelBlacklist);
     return !(channelBlacklist === null);
   }
 

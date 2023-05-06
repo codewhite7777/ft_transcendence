@@ -74,6 +74,23 @@ export class ChatGateway
       channels.forEach((channel) => {
         client.join(channel.ch.roomname);
       });
+
+      const channelswithSocketId = channels.map((channel) =>
+        channel.ch.channelinfos.map((channelinfo) => ({
+          ...channelinfo,
+          // id: channelinfo.ch.id,
+          // name: channelinfo.ch.roomname,
+          user: {
+            ...channelinfo.user,
+            socketId: this.usMapper.get(channelinfo.userid),
+          },
+        })),
+      );
+
+      client.emit(
+        'initChannels',
+        this.createEventResponse(true, '', channelswithSocketId),
+      );
     }
   }
 
@@ -255,7 +272,7 @@ export class ChatGateway
     const user: User = await this.userService.findUserById(userId);
     if (user === null) return `Error: User doesn't exist`;
 
-    if (this.chatService.isBanned(channel, user))
+    if (await this.chatService.isBanned(channel, user))
       return `Error: 당신은 해당 채널에서 Ban 당했습니다.`;
 
     if (channel.kind === 1) {
@@ -274,8 +291,9 @@ export class ChatGateway
       Todo. channel.channelinfo를 보낼건데, socketid도 포함시켜서 보내기.
       const roomClientsCount = io.sockets.adapter.rooms.get(roomName)?.size || 0;
     */
+    console.log('adapter: ', this.server.sockets.adapter);
     const welcomeData = {
-      num: this.server.sockets.adapter.rooms.get(roomName)?.size || 0,
+      num: this.server.sockets.adapter?.rooms.get(roomName)?.size || 0,
       roomName,
       users: channel.channelinfos.map((user) => ({
         ...user,
@@ -291,30 +309,30 @@ export class ChatGateway
     @ConnectedSocket() client,
     @MessageBody(ChannelValidationPipe) data,
   ) {
-    const { roomname, userId } = data;
-    if (!roomname || !userId)
+    const { roomName, userId } = data;
+    if (!roomName || !userId)
       return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('leftChannel event: ', roomname, userId);
+    console.log('leftChannel event: ', roomName, userId);
 
-    if (!client.rooms.has(roomname))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+    if (!client.rooms.has(roomName))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
 
-    const channel = await this.chatService.getChannelByName(roomname);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const channel = await this.chatService.getChannelByName(roomName);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
     if (channel.owner.id === userId)
       return `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`;
 
     this.server
-      .to(roomname)
+      .to(roomName)
       .emit(
         'chat',
-        `Server🤖: User ${client.id} has left the room ${roomname}`,
+        `Server🤖: User ${client.id} has left the room ${roomName}`,
       );
-    client.leave(roomname);
+    client.leave(roomName);
     await this.chatService.leftChannel(channel, user);
-    return `Success: 채널 ${roomname}에서 클라이언트 ${user.intraid}가 성공적으로 퇴장했습니다.`;
+    return `Success: 채널 ${roomName}에서 클라이언트 ${user.intraid}가 성공적으로 퇴장했습니다.`;
   }
 
   // 특정 채널에서 owner를 내 자신에서 이 사람으로 넘깁니다.
