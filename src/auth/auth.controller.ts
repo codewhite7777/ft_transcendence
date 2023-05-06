@@ -62,22 +62,12 @@ export class AuthController {
       console.log(`otp 미 사용자 세션 생성`);
       console.log(`session Key : ${sessionData.key}`);
       console.log(`session User : ${sessionData.name}`);
-      // console.log(`User ID : ${result.id}`);
-      // console.log(`User email : ${result.email}`);
-      // console.log(`User win : ${result.wincount}`);
-      // console.log(`User lose : ${result.losecount}`);
-      // console.log(`User opt : ${result.isotp}`);
       //쿠키 값 전달
       res.cookie('session_key', sessionData.key);
-      if (firstFlag == true) {
-        //intraID 쿠키 값 설정
-        res.cookie('nickname', result.intraid);
-        console.log('userData json: ', JSON.stringify(result));
-        res.cookie('userData', JSON.stringify(result));
-
-        //리디렉션 join 설정
-        redirectURL = 'http://localhost:3001/join';
-      }
+      res.cookie('nickname', result.intraid);
+      res.cookie('userData', JSON.stringify(result));
+      //리디렉션 join 설정 asdasdfasdfa
+      if (firstFlag == true) redirectURL = 'http://localhost:3001/join';
     } else {
       //for debug
       console.log(`otp 사용자 세션 미 생성`);
