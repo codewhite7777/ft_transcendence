@@ -27,7 +27,7 @@ export class Channel {
   @Column('character varying', {
     name: 'roompassword',
     nullable: true,
-    length: 50,
+    length: 60,
   })
   roompassword: string | null;
 
