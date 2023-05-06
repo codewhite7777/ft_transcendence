@@ -14,10 +14,14 @@ import { Channel } from '../typeorm/entities/Channel';
 import { User } from '../typeorm/entities/User';
 import { UserService } from '../user/user.service';
 import { EventResponse } from './eventResponse.interface';
-import { CreateChannelValidationPipe } from './chat.pipe';
+import { CreateChannelValidationPipe } from '../pipes/chat.pipe';
 import { UseFilters } from '@nestjs/common';
 import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
 import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
+import * as bcrypt from 'bcrypt';
+import { ChannelValidationPipe } from 'src/pipes/chat.pipe';
+
+type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
 
 // 이 설정들이 뭘하는건지, 애초에 무슨 레포를 보고 이것들을 찾을 수 있는지 전혀 모르겠다.
 @WebSocketGateway(4242, {
@@ -52,6 +56,7 @@ export class ChatGateway
   }
 
   // Todo 클라이언트가 어떤 유저인지 파악하고, 해당 유저가 db상으로 참여한 방을 찾은후 입장시켜야 한다.
+  // 입장시켰고, 입장한 채널info 목록을 프론트에게 전달해야 한다.
   async handleConnection(client: any, ...args: any[]) {
     console.log(
       `Chat Client connected: ${client.id}: `,
@@ -157,13 +162,18 @@ export class ChatGateway
     const user: User = await this.userService.findUser(client.intraID);
     if (user == null)
       return this.createErrorEventResponse(`당신의 회원정보가 없습니다!`);
+    const socketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
 
     // 채널 생성(중복검사 yes)
     // Todo. 비밀번호가 있는 채널을 생성할때는 어떻게 할까?
     const newChannel: Channel = await this.chatService.createChannel(
       kind,
-      client.userId,
+      socketUserId,
       roomName,
+      roomPassword,
     );
 
     // 방장을 참여.
@@ -228,8 +238,11 @@ export class ChatGateway
   // socket을 특정 room에 join 시킵니다.
   // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
-  async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
-    const { userId, roomName } = data;
+  async handleJoin(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
+    const { userId, roomName, roomPassword } = data;
     console.log('joinChannel: ', userId, ', ', roomName);
     if (!userId || !roomName) return `Error: parameter error`;
     if (client.rooms.has(roomName))
@@ -244,6 +257,12 @@ export class ChatGateway
 
     if (this.chatService.isBanned(channel, user))
       return `Error: 당신은 해당 채널에서 Ban 당했습니다.`;
+
+    if (channel.kind === 1) {
+      if (roomPassword === undefined) return `Error: parameter error`;
+      if (!(await bcrypt.compare(roomPassword, channel.roompassword)))
+        return `Error: Wrong password`;
+    }
 
     await this.chatService.joinChannel(channel, user, false, false);
     // join on socket level
@@ -268,7 +287,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('leftChannel')
-  async handleLeft(@ConnectedSocket() client, @MessageBody() data) {
+  async handleLeft(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     const { roomname, userId } = data;
     if (!roomname || !userId)
       return `Error: 필요한 인자가 주어지지 않았습니다.`;
@@ -302,7 +324,10 @@ export class ChatGateway
     });
   */
   @SubscribeMessage('delegateChannel')
-  async handleDelegate(@ConnectedSocket() client, @MessageBody() data) {
+  async handleDelegate(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -337,7 +362,10 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 부여합니다.
   @SubscribeMessage('permissionChannel')
-  async handlePermission(@ConnectedSocket() client, @MessageBody() data) {
+  async handlePermission(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -374,7 +402,10 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 회수합니다.
   @SubscribeMessage('revokeChannel')
-  async handleRevoke(@ConnectedSocket() client, @MessageBody() data) {
+  async handleRevoke(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     const soketUserId: number = parseInt(
@@ -437,7 +468,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('ban')
-  async handleBan(@ConnectedSocket() client, @MessageBody() data) {
+  async handleBan(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     if (!roomname || !userId)
@@ -473,7 +507,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('kick')
-  async handleKick(@ConnectedSocket() client, @MessageBody() data) {
+  async handleKick(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe) data,
+  ) {
     // 인자검사
     const { roomname, userId } = data;
     if (!roomname || !userId)
@@ -503,5 +540,44 @@ export class ChatGateway
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Kick하였습니다.`;
+  }
+
+  @SubscribeMessage('getFriend')
+  async getFriend(@ConnectedSocket() client, @MessageBody() data) {
+    // hi
+    // socket의 User를 가져온다.
+    const userId = client?.handshake?.userid; // <- 이 부분은 client인자에서 파이프를 통해 한번 걸러서 가져오는게 좋을 것 같아.
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
+    // User를 Friend로 추가한 유저들의 리스트를 가져온다
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
+    const userList = await this.chatService.getFriend(userId);
+    const userListwithSocketId = userList.map((user) => ({
+      ...user,
+      socketId: this.usMapper.get(user.userId.id),
+    }));
+    // 유저리스트를 반환한다
+    return userListwithSocketId;
+  }
+
+  @SubscribeMessage('state')
+  async updateFriendState(@ConnectedSocket() client, @MessageBody() data) {
+    const status: UserStatus = data.status;
+
+    // socket의 User를 가져온다.
+    const userId = client?.handshake?.userid; // <- 이 부분은 client인자에서 파이프를 통해 한번 걸러서 가져오는게 좋을 것 같아.
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
+    // User를 Friend로 추가한 유저들의 리스트를 가져온다
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
+    const userList = await this.chatService.getFriend(userId);
+    const updateData = { userId, status };
+    userList.forEach((user) =>
+      this.server
+        .to(this.usMapper.get(user.userId.id))
+        .emit('state', updateData),
+    );
+
+    return 'Success';
   }
 }

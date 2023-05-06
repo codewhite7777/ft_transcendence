@@ -105,7 +105,7 @@ export class ChatService {
   }
   // 비밀번호 암호화 로직을 넣어야 함...!
   async updatePassword(channel: Channel, password: string) {
-    channel.roompassword = this.encryptPassword(password);
+    channel.roompassword = await this.encryptPassword(password);
     return this.channelRepository.save(channel);
   }
   async updateKind(channel: Channel, kind: number) {
@@ -238,9 +238,9 @@ export class ChatService {
     // socket상으로 막는다.
   }
 
-  // 아직 아무것도 안했지만 여기서 암호화를 할것.
-  encryptPassword(password: string) {
-    return password;
+  async encryptPassword(password: string) {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
   }
 
   async getFriend(_userId: number) {
