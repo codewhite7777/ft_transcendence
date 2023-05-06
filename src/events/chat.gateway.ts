@@ -174,11 +174,7 @@ export class ChatGateway
     @MessageBody(CreateChannelValidationPipe) data,
     //@MessageBody() data,
   ) {
-    console.log('createChannel: ', data);
     const { kind, roomName, roomPassword } = data;
-
-    // if (!kind || !roomName)
-    //   return this.createErrorEventResponse(`파라미터 오류`);
 
     // user 검증
     const user: User = await this.userService.findUser(client.intraID);
@@ -352,20 +348,17 @@ export class ChatGateway
     @MessageBody(ChannelValidationPipe) data,
   ) {
     // 인자검사
-    const { roomname, userId } = data;
+    const { roomName, userId } = data;
     const soketUserId: number = parseInt(
       client?.handshake?.headers?.userid,
       10,
     );
-    if (!roomname || !userId)
-      return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('delegateChannel event: ', roomname, userId);
 
-    if (!client.rooms.has(roomname))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+    if (!client.rooms.has(roomName))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
 
-    const channel = await this.chatService.getChannelByName(roomname);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const channel = await this.chatService.getChannelByName(roomName);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
     if (channel.owner.id !== soketUserId)
@@ -375,12 +368,12 @@ export class ChatGateway
     await this.chatService.delegate(channel, user);
 
     this.server
-      .to(roomname)
+      .to(roomName)
       .emit(
         'chat',
-        `Server🤖: 유저 ${client.id}가 ${roomname}의 새 방장입니다!`,
+        `Server🤖: 유저 ${client.id}가 ${roomName}의 새 방장입니다!`,
       );
-    return `Success: 채널 ${roomname}의 방장 권한을 클라이언트 ${user.intraid}에게 성공적으로 위임했습니다.`;
+    return `Success: 채널 ${roomName}의 방장 권한을 클라이언트 ${user.intraid}에게 성공적으로 위임했습니다.`;
   }
 
   // 특정 채널에서 user에게 admin권한을 부여합니다.
@@ -390,20 +383,17 @@ export class ChatGateway
     @MessageBody(ChannelValidationPipe) data,
   ) {
     // 인자검사
-    const { roomname, userId } = data;
+    const { roomName, userId } = data;
     const soketUserId: number = parseInt(
       client?.handshake?.headers?.userid,
       10,
     );
-    if (!roomname || !userId)
-      return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('permissonChannel event: ', roomname, userId);
 
-    if (!client.rooms.has(roomname))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+    if (!client.rooms.has(roomName))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
 
-    const channel = await this.chatService.getChannelByName(roomname);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const channel = await this.chatService.getChannelByName(roomName);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
     const socketUser = await this.userService.findUserById(soketUserId);
@@ -415,12 +405,12 @@ export class ChatGateway
     await this.chatService.permission(channel, user);
 
     this.server
-      .to(roomname)
+      .to(roomName)
       .emit(
         'chat',
-        `Server🤖: 유저 ${user.nickname}가 ${roomname}의 Admin권한을 획득했습니다!`,
+        `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 획득했습니다!`,
       );
-    return `Success: 채널 ${roomname}의 Admin 권한을 클라이언트 ${user.intraid}에게 성공적으로 부여했습니다.`;
+    return `Success: 채널 ${roomName}의 Admin 권한을 클라이언트 ${user.intraid}에게 성공적으로 부여했습니다.`;
   }
 
   // 특정 채널에서 user에게 admin권한을 회수합니다.
@@ -430,20 +420,16 @@ export class ChatGateway
     @MessageBody(ChannelValidationPipe) data,
   ) {
     // 인자검사
-    const { roomname, userId } = data;
+    const { roomName, userId } = data;
     const soketUserId: number = parseInt(
       client?.handshake?.headers?.userid,
       10,
     );
-    if (!roomname || !userId)
-      return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('permissonChannel event: ', roomname, userId);
+    if (!client.rooms.has(roomName))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
 
-    if (!client.rooms.has(roomname))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
-
-    const channel = await this.chatService.getChannelByName(roomname);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const channel = await this.chatService.getChannelByName(roomName);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
     const socketUser = await this.userService.findUserById(soketUserId);
@@ -455,14 +441,14 @@ export class ChatGateway
     await this.chatService.revoke(channel, user);
 
     this.server
-      .to(roomname)
+      .to(roomName)
       .emit(
         'chat',
-        `Server🤖: 유저 ${user.nickname}가 ${roomname}의 Admin권한을 잃었습니다!`,
+        `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 잃었습니다!`,
       );
-    client.leave(roomname);
+    client.leave(roomName);
     await this.chatService.leftChannel(channel, user);
-    return `Success: 채널 ${roomname}의 Admin 권한을 클라이언트 ${user.nickname}에게서 회수했습니다.`;
+    return `Success: 채널 ${roomName}의 Admin 권한을 클라이언트 ${user.nickname}에게서 회수했습니다.`;
   }
 
   // 특정 채널에서 user에게 admin권한을 회수합니다.
@@ -496,16 +482,13 @@ export class ChatGateway
     @MessageBody(ChannelValidationPipe) data,
   ) {
     // 인자검사
-    const { roomname, userId } = data;
-    if (!roomname || !userId)
-      return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('ban event: ', roomname, userId);
+    const { roomName, userId } = data;
 
-    if (!client.rooms.has(roomname))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+    if (!client.rooms.has(roomName))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
 
-    const channel = await this.chatService.getChannelByName(roomname);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const channel = await this.chatService.getChannelByName(roomName);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
 
@@ -523,7 +506,7 @@ export class ChatGateway
     this.chatService.ban(channel, user);
 
     // socket상에서 room에서 퇴장시킨다.
-    client.leave(roomname);
+    client.leave(roomName);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Ban하였습니다.`;
@@ -535,16 +518,13 @@ export class ChatGateway
     @MessageBody(ChannelValidationPipe) data,
   ) {
     // 인자검사
-    const { roomname, userId } = data;
-    if (!roomname || !userId)
-      return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('ban event: ', roomname, userId);
+    const { roomName, userId } = data;
 
-    if (!client.rooms.has(roomname))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomname}이 존재하지 않습니다.`;
+    if (!client.rooms.has(roomName))
+      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
 
-    const channel = await this.chatService.getChannelByName(roomname);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomname}`;
+    const channel = await this.chatService.getChannelByName(roomName);
+    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
 
@@ -559,7 +539,7 @@ export class ChatGateway
     this.chatService.leftChannel(channel, user);
 
     // socket상에서 room에서 퇴장시킨다.
-    client.leave(roomname);
+    client.leave(roomName);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Kick하였습니다.`;
