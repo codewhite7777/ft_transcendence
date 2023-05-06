@@ -160,19 +160,11 @@ export class ChatGateway
 
   // Chat Login Start
 
-  /*
-    data = {
-      "kind": 0,
-      "roomName": "sample room name",
-      "roomPassword": "sample room name", <- optional property
-    }
-  */
   @SubscribeMessage('createChannel')
   @UseFilters(SocketParameterValidationExceptionFilter)
   async createChannel(
     @ConnectedSocket() client,
     @MessageBody(CreateChannelValidationPipe) data,
-    //@MessageBody() data,
   ) {
     const { kind, roomName, roomPassword } = data;
 
@@ -229,14 +221,7 @@ export class ChatGateway
     //return channels;
   }
 
-  // socket의 메시지를 room내부의 모든 이들에게 전달합니다.
   // Todo. user가 채널에서 mute상태인지 확인합니다.
-  /*
-  data = {
-    "message": "hello world!",
-    "roomName": ""
-  }
-  */
   @SubscribeMessage('chat')
   async handleChat(@ConnectedSocket() client, @MessageBody() data) {
     const { roomName, message } = data;
@@ -337,11 +322,6 @@ export class ChatGateway
   }
 
   // 특정 채널에서 owner를 내 자신에서 이 사람으로 넘깁니다.
-  /*
-    socket.emit('delegateChannel', data, () => {
-      console.log('서버에서 delegateChannel이벤트처리가 끝나면 출력되는 콘솔로그);
-    });
-  */
   @SubscribeMessage('delegateChannel')
   async handleDelegate(
     @ConnectedSocket() client,
