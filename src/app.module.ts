@@ -12,9 +12,6 @@ import { FriendlistModule } from './friendlist/friendlist.module';
 import { UserblacklistModule } from './userblacklist/userblacklist.module';
 import { MatchhistoryModule } from './matchhistory/matchhistory.module';
 import { EventsModule } from './events/events.module';
-import * as fs from 'fs';
-import { UploadsModule } from './uploads/uploads.module';
-import UploadsService from './uploads/uploads.service';
 
 @Module({
   imports: [
@@ -29,16 +26,8 @@ import UploadsService from './uploads/uploads.service';
     FriendlistModule,
     UserblacklistModule,
     MatchhistoryModule,
-    UploadsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, UploadsService],
+  providers: [AppService],
 })
-export class AppModule {
-  constructor() {
-    const uploadDir = './uploads';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir);
-    }
-  }
-}
+export class AppModule {}
