@@ -9,7 +9,25 @@ export class UserService {
 
   constructor(
     @Inject('USER_REPOSITORY') private userRepository: Repository<User>,
-  ) {}
+  ) {
+  }
+
+  printSession(): void {
+    console.log('-------------');
+    let i = 0;
+    for (; i < this.sessionArr.length; i++)
+    {
+      console.log(this.sessionArr[i]);
+    }
+    console.log('-------------');
+  }
+
+  deleteSession(intraID: string): void {
+    const index = this.sessionArr.findIndex(session => session.name === intraID);
+    if (index !== -1) {
+    this.sessionArr.splice(index, 1);
+    }
+  }
 
   //세션 키 발급
   createSession(intraID: string): { [key: string]: string } {
