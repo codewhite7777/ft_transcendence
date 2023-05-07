@@ -279,15 +279,8 @@ export class ChatGateway
     // join on socket level
     client.join(roomName);
 
-    // 입장한 유저한테 어떤 정보를 제시할 것인가?
-    /*
-      1. Channel에 포함된 유저 목록(db, socket)
-      Todo. channel.channelinfo를 보낼건데, socketid도 포함시켜서 보내기.
-      const roomClientsCount = io.sockets.adapter.rooms.get(roomName)?.size || 0;
-    */
-    console.log('adapter: ', this.server.sockets.adapter);
     const welcomeData = {
-      num: this.server.sockets.adapter?.rooms.get(roomName)?.size || 0,
+      kind: channel.kind,
       roomName,
       users: channel.channelinfos.map((user) => ({
         ...user,
@@ -295,7 +288,8 @@ export class ChatGateway
       })),
     };
     console.log('welcomeData: ', welcomeData);
-    this.server.to(roomName).emit('welcome', welcomeData);
+    this.server.to(roomName).emit('user-join', { roomName, userId });
+    return welcomeData;
   }
 
   @SubscribeMessage('leftChannel')
@@ -458,7 +452,7 @@ export class ChatGateway
     data: { roomName: string; userId: number },
   ) {
     const { roomName, userId } = data;
-    console.log(`roomName: ${roomName}, userId: ${userId}`)
+    console.log(`roomName: ${roomName}, userId: ${userId}`);
     const duration = 10;
 
     console.log('1');
@@ -611,5 +605,11 @@ export class ChatGateway
     );
 
     return 'Success';
+  }
+
+  @SubscribeMessage('getProfile')
+  async getProfile(@ConnectedSocket() client, @MessageBody() data) {
+    const { intraId } = data;
+    return await this.userService.findUser(intraId);
   }
 }
