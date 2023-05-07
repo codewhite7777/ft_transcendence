@@ -80,6 +80,7 @@ export class ChatGateway
       const channelswithSocketId = channels.map((channel) => ({
         id: channel.ch.id,
         name: channel.ch.roomname,
+        kind: channel.ch.kind,
         users: channel.ch.channelinfos.map((channelinfo) => ({
           id: channelinfo.user.id,
           nickname: channelinfo.user.nickname,
