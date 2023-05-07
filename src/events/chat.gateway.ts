@@ -453,7 +453,7 @@ export class ChatGateway
   @SubscribeMessage('mute')
   async mute(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe)
+    @MessageBody()
     data: { roomName: string; userId: number },
   ) {
     const { roomName, userId } = data;
