@@ -347,6 +347,7 @@ export class ChatGateway
     // 핵심 위임로직.
     await this.chatService.delegate(channel, user);
 
+    this.server.to(roomName).emit('owner-granted', { roomName, user });
     this.server
       .to(roomName)
       .emit(
@@ -384,12 +385,15 @@ export class ChatGateway
     // 핵심 위임로직.
     await this.chatService.permission(channel, user);
 
+    // 같은방 사람들에게 공지
+    this.server.to(roomName).emit('admin-granted', { roomName, user });
     this.server
       .to(roomName)
       .emit(
         'chat',
         `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 획득했습니다!`,
       );
+
     return `Success: 채널 ${roomName}의 Admin 권한을 클라이언트 ${user.intraid}에게 성공적으로 부여했습니다.`;
   }
 
@@ -399,6 +403,7 @@ export class ChatGateway
     @ConnectedSocket() client,
     @MessageBody(ChannelValidationPipe) data,
   ) {
+    console.log('handleRevoke');
     // 인자검사
     const { roomName, userId } = data;
     const soketUserId: number = parseInt(
@@ -420,14 +425,13 @@ export class ChatGateway
     // 핵심 위임로직.
     await this.chatService.revoke(channel, user);
 
+    this.server.to(roomName).emit('admin-revoked', { roomName, user });
     this.server
       .to(roomName)
       .emit(
         'chat',
         `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 잃었습니다!`,
       );
-    client.leave(roomName);
-    await this.chatService.leftChannel(channel, user);
     return `Success: 채널 ${roomName}의 Admin 권한을 클라이언트 ${user.nickname}에게서 회수했습니다.`;
   }
 
@@ -487,6 +491,11 @@ export class ChatGateway
 
     // socket상에서 room에서 퇴장시킨다.
     client.leave(roomName);
+    this.server.to(roomName).emit('user-banned', { roomName, user });
+    // Todo. 누구에게 강퇴당했는지 명시할것.
+    this.server
+      .to(roomName)
+      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Ban하였습니다.`;
@@ -520,6 +529,11 @@ export class ChatGateway
 
     // socket상에서 room에서 퇴장시킨다.
     client.leave(roomName);
+    this.server.to(roomName).emit('user-kicked', { roomName, user });
+    // Todo. 누구에게 강퇴당했는지 명시할것.
+    this.server
+      .to(roomName)
+      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Kick 당했습니다!`);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Kick하였습니다.`;
