@@ -458,13 +458,18 @@ export class ChatGateway
     data: { roomName: string; userId: number },
   ) {
     const { roomName, userId } = data;
+    console.log(`roomName: ${roomName}, userId: ${userId}`)
     const duration = 10;
+
+    console.log('1');
 
     const user = await this.userService.findUserById(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
 
     // Calculate the mute end timestamp
     const muteEndTimestamp = Date.now() + duration * 1000;
+
+    console.log('2');
 
     // Get or create the roomMutedUsers Map for the specified roomId
     let roomMutedUsers = this.mutedUsers.get(roomName);
@@ -476,9 +481,14 @@ export class ChatGateway
     // Add or update the user to the roomMutedUsers Map
     roomMutedUsers.set(this.usMapper.get(userId), muteEndTimestamp);
 
+    console.log('3');
+
     // Send a message to the user indicating they have been muted
     // Todo. 어떻게 뮤트된 유저에게 이벤트를 전달할지 고민!
-    client.to(roomName).emit('user-muted', { roomName, muteEndTimestamp });
+    this.server.to(roomName).emit('user-muted', { roomName, muteEndTimestamp });
+
+    console.log('4');
+
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
