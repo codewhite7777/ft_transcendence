@@ -42,7 +42,8 @@ export class ChatGateway
   // string말고 유저에 대한 정보 ex) socketId, status
   usMapper: Map<number, string>; // userId = 1, socketid=x
 
-  private mutedUsers: Map<string, number> = new Map(); // Key: socket.id, Value: timestamp (end of mute duration)
+  // Key: roomName, Value: Map<socketId, timestamp (end of mute duration)>
+  private mutedUsers: Map<string, Map<string, number>> = new Map();
 
   constructor(
     private readonly chatService: ChatService,
@@ -141,14 +142,21 @@ export class ChatGateway
     return room ? room.size : 0;
   }
 
-  isMuted(client: Socket) {
-    const muteEndTimestamp = this.mutedUsers.get(client.id);
+  isMuted(client: Socket, roomName: string) {
+    // Get the roomMutedUsers Map for the specified roomId
+    const roomMutedUsers = this.mutedUsers.get(roomName);
+
+    if (!roomMutedUsers) return false;
+    const muteEndTimestamp = roomMutedUsers.get(client.id);
 
     if (muteEndTimestamp) {
       const currentTime = Date.now();
 
       // Todo. 뮤트사용자에게 현재 채팅이 막혔다는 이벤트를 어떻게 발생시킬 것인가?
       if (currentTime < muteEndTimestamp) {
+        this.server
+          .to(roomName)
+          .emit('user-muted', { roomName, muteEndTimestamp });
         return true;
       } else {
         this.mutedUsers.delete(client.id);
@@ -225,10 +233,9 @@ export class ChatGateway
   @SubscribeMessage('chat')
   async handleChat(@ConnectedSocket() client, @MessageBody() data) {
     const { roomName, message } = data;
-    console.log('@chat: ', data);
-    console.log('@message: ', data);
+    console.log(`[${roomName}] ${message}`);
 
-    if (this.isMuted(client))
+    if (this.isMuted(client, roomName))
       return this.createErrorEventResponse(
         `당신은 ${this.mutedUsers.get(client.id)}까지 mute된 상태입니다.`,
       );
@@ -444,20 +451,37 @@ export class ChatGateway
 
   // Todo. payload를 저렇게 깔끔하게 표시할 수 있구나.. 다른 함수들에도 적용하자.
   @SubscribeMessage('mute')
-  async mute(client: Socket, payload: { socketId: string }): Promise<void> {
-    const { socketId } = payload;
+  async mute(
+    @ConnectedSocket() client,
+    @MessageBody(ChannelValidationPipe)
+    data: { roomName: string; userId: number },
+  ) {
+    const { roomName, userId } = data;
     const duration = 10;
-    if (!socketId) return;
+
+    const user = await this.userService.findUserById(userId);
+    if (user === null) return `Error: 알수없는 유저입니다.`;
 
     // Calculate the mute end timestamp
     const muteEndTimestamp = Date.now() + duration * 1000;
 
-    // Add or update the user to the mutedUsers Map
-    this.mutedUsers.set(socketId, muteEndTimestamp);
+    // Get or create the roomMutedUsers Map for the specified roomId
+    let roomMutedUsers = this.mutedUsers.get(roomName);
+    if (!roomMutedUsers) {
+      roomMutedUsers = new Map();
+      this.mutedUsers.set(roomName, roomMutedUsers);
+    }
+
+    // Add or update the user to the roomMutedUsers Map
+    roomMutedUsers.set(this.usMapper.get(userId), muteEndTimestamp);
 
     // Send a message to the user indicating they have been muted
     // Todo. 어떻게 뮤트된 유저에게 이벤트를 전달할지 고민!
-    client.to(socketId).emit('muted', { muteEndTimestamp });
+    client.to(roomName).emit('user-muted', { roomName, muteEndTimestamp });
+    // Todo. 누구에게 강퇴당했는지 명시할것.
+    this.server
+      .to(roomName)
+      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
   }
 
   @SubscribeMessage('ban')
@@ -489,13 +513,13 @@ export class ChatGateway
     // db상에서 채널밴 데이터를 생성한다.
     this.chatService.ban(channel, user);
 
-    // socket상에서 room에서 퇴장시킨다.
-    client.leave(roomName);
     this.server.to(roomName).emit('user-banned', { roomName, user });
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
       .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
+    // socket상에서 room에서 퇴장시킨다.
+    client.leave(roomName);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Ban하였습니다.`;
@@ -527,13 +551,13 @@ export class ChatGateway
     // db상에서 채널참여 데이터를 삭제한다.
     this.chatService.leftChannel(channel, user);
 
-    // socket상에서 room에서 퇴장시킨다.
-    client.leave(roomName);
     this.server.to(roomName).emit('user-kicked', { roomName, user });
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
       .emit('chat', `Server🤖: 유저 ${user.nickname}가 Kick 당했습니다!`);
+    // socket상에서 room에서 퇴장시킨다.
+    client.leave(roomName);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Kick하였습니다.`;
