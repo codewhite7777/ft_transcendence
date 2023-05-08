@@ -15,11 +15,12 @@ import { User } from '../typeorm/entities/User';
 import { UserService } from '../user/user.service';
 import { EventResponse } from './eventResponse.interface';
 import { CreateChannelValidationPipe } from '../pipes/chat.pipe';
-import { UseFilters } from '@nestjs/common';
+import { UseFilters, UseInterceptors } from '@nestjs/common';
 import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
 import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
 import * as bcrypt from 'bcrypt';
 import { ChannelValidationPipe } from 'src/pipes/chat.pipe';
+import { ChannelValidationInterceptor } from 'src/intercept/ChannelValidation.intercept';
 
 type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
 
@@ -59,18 +60,14 @@ export class ChatGateway
   // Todo 클라이언트가 어떤 유저인지 파악하고, 해당 유저가 db상으로 참여한 방을 찾은후 입장시켜야 한다.
   // 입장시켰고, 입장한 채널info 목록을 프론트에게 전달해야 한다.
   async handleConnection(client: any, ...args: any[]) {
-    console.log(
-      `Chat Client connected: ${client.id}: `,
-      client?.handshake?.userid,
-    );
+    console.log(`Chat Client connected: ${client.id}: `);
     const userId: number = parseInt(client?.handshake?.headers?.userid, 10);
-    console.log(userId);
     if (userId) {
       this.usMapper.set(userId, client.id);
       // 유저가 db상으로 접속된 채널 목록을 가져온다.
       const channels: Channelinfo[] =
         await this.chatService.getChannelInfoByUser(userId);
-      console.log('channels: ', channels);
+      //console.log('channels: ', channels);
       // 유저를 채널 목록들에 모두 join시킨다.
       channels.forEach((channel) => {
         client.join(channel.ch.roomname);
@@ -155,6 +152,7 @@ export class ChatGateway
 
       // Todo. 뮤트사용자에게 현재 채팅이 막혔다는 이벤트를 어떻게 발생시킬 것인가?
       if (currentTime < muteEndTimestamp) {
+        console.log('muted user...!');
         this.server
           .to(roomName)
           .emit('user-muted', { roomName, muteEndTimestamp });
@@ -255,7 +253,6 @@ export class ChatGateway
   ) {
     const { userId, roomName, roomPassword } = data;
     console.log('joinChannel: ', userId, ', ', roomName);
-    if (!userId || !roomName) return `Error: parameter error`;
     if (client.rooms.has(roomName))
       return `Error: 이미 해당 방에 참여중입니다.`;
 
@@ -325,27 +322,12 @@ export class ChatGateway
 
   // 특정 채널에서 owner를 내 자신에서 이 사람으로 넘깁니다.
   @SubscribeMessage('delegateChannel')
+  @UseInterceptors(ChannelValidationInterceptor)
   async handleDelegate(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
+    @MessageBody()
+    { roomName, user, clientUser, channel }: any,
   ) {
-    // 인자검사
-    const { roomName, userId } = data;
-    const soketUserId: number = parseInt(
-      client?.handshake?.headers?.userid,
-      10,
-    );
-
-    if (!client.rooms.has(roomName))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
-
-    const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
-    if (channel.owner.id !== soketUserId)
-      return `Error: 당신은 방장이 아닙니다!`;
-
     // 핵심 위임로직.
     await this.chatService.delegate(channel, user);
 
@@ -361,28 +343,14 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 부여합니다.
   @SubscribeMessage('permissionChannel')
+  @UseInterceptors(ChannelValidationInterceptor)
   async handlePermission(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
+    @MessageBody()
+    { roomName, user, clientUser, channel }: any,
   ) {
-    // 인자검사
-    const { roomName, userId } = data;
-    const soketUserId: number = parseInt(
-      client?.handshake?.headers?.userid,
-      10,
-    );
-
-    if (!client.rooms.has(roomName))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
-
-    const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
-    const socketUser = await this.userService.findUserById(soketUserId);
-
     // 권한 체크 : admin인가?
-    if (!(await this.chatService.isAdmin(channel, socketUser)))
+    if (!(await this.chatService.isAdmin(channel, clientUser)))
       return `Error: 당신은 Admin 권한이 없습니다.`;
     // 핵심 위임로직.
     await this.chatService.permission(channel, user);
@@ -401,28 +369,15 @@ export class ChatGateway
 
   // 특정 채널에서 user에게 admin권한을 회수합니다.
   @SubscribeMessage('revokeChannel')
+  @UseInterceptors(ChannelValidationInterceptor)
   async handleRevoke(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
+    @MessageBody()
+    { roomName, user, clientUser, channel }: any,
   ) {
     console.log('handleRevoke');
-    // 인자검사
-    const { roomName, userId } = data;
-    const soketUserId: number = parseInt(
-      client?.handshake?.headers?.userid,
-      10,
-    );
-    if (!client.rooms.has(roomName))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
-
-    const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
-    const socketUser = await this.userService.findUserById(soketUserId);
-
     // 권한 체크 : admin인가?
-    if (!(await this.chatService.isAdmin(channel, socketUser)))
+    if (!(await this.chatService.isAdmin(channel, clientUser)))
       return `Error: 당신은 Admin 권한이 없습니다.`;
     // 핵심 위임로직.
     await this.chatService.revoke(channel, user);
@@ -446,24 +401,17 @@ export class ChatGateway
 
   // Todo. payload를 저렇게 깔끔하게 표시할 수 있구나.. 다른 함수들에도 적용하자.
   @SubscribeMessage('mute')
+  @UseInterceptors(ChannelValidationInterceptor)
   async mute(
     @ConnectedSocket() client,
     @MessageBody()
-    data: { roomName: string; userId: number },
+    { roomName, user, clientUser, channel }: any,
   ) {
-    const { roomName, userId } = data;
-    console.log(`roomName: ${roomName}, userId: ${userId}`);
+    console.log(`roomName: ${roomName}, userId: ${user.id}`);
     const duration = 10;
-
-    console.log('1');
-
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
 
     // Calculate the mute end timestamp
     const muteEndTimestamp = Date.now() + duration * 1000;
-
-    console.log('2');
 
     // Get or create the roomMutedUsers Map for the specified roomId
     let roomMutedUsers = this.mutedUsers.get(roomName);
@@ -473,15 +421,11 @@ export class ChatGateway
     }
 
     // Add or update the user to the roomMutedUsers Map
-    roomMutedUsers.set(this.usMapper.get(userId), muteEndTimestamp);
-
-    console.log('3');
+    roomMutedUsers.set(this.usMapper.get(user.id), muteEndTimestamp);
 
     // Send a message to the user indicating they have been muted
     // Todo. 어떻게 뮤트된 유저에게 이벤트를 전달할지 고민!
     this.server.to(roomName).emit('user-muted', { roomName, muteEndTimestamp });
-
-    console.log('4');
 
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
@@ -490,27 +434,18 @@ export class ChatGateway
   }
 
   @SubscribeMessage('ban')
+  @UseInterceptors(ChannelValidationInterceptor)
   async handleBan(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
+    @MessageBody()
+    { roomName, user, clientUser, channel }: any,
   ) {
-    // 인자검사
-    const { roomName, userId } = data;
-
-    if (!client.rooms.has(roomName))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
-
-    const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
-
     // 요청자가 admin인가?
     if (!this.chatService.isAdmin(channel, user))
       return `Error: 당신은 admin권한이 없습니다.`;
 
     // 대상자가 방장인가?
-    if (userId === channel.owner.id) return `Error: 대상이 방장입니다.`;
+    if (user.id === channel.owner.id) return `Error: 대상이 방장입니다.`;
 
     // db상에서 채널참여 데이터를 삭제한다.
     this.chatService.leftChannel(channel, user);
@@ -531,27 +466,18 @@ export class ChatGateway
   }
 
   @SubscribeMessage('kick')
+  @UseInterceptors(ChannelValidationInterceptor)
   async handleKick(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
+    @MessageBody()
+    { roomName, user, clientUser, channel }: any,
   ) {
-    // 인자검사
-    const { roomName, userId } = data;
-
-    if (!client.rooms.has(roomName))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
-
-    const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
-
     // 요청자가 admin인가?
     if (!this.chatService.isAdmin(channel, user))
       return `Error: 당신은 admin권한이 없습니다.`;
 
     // 대상자가 방장인가?
-    if (userId === channel.owner.id) return `Error: 대상이 방장입니다.`;
+    if (user.id === channel.owner.id) return `Error: 대상이 방장입니다.`;
 
     // db상에서 채널참여 데이터를 삭제한다.
     this.chatService.leftChannel(channel, user);
@@ -611,5 +537,21 @@ export class ChatGateway
   async getProfile(@ConnectedSocket() client, @MessageBody() data) {
     const { intraId } = data;
     return await this.userService.findUser(intraId);
+  }
+
+  @SubscribeMessage('channel-invite')
+  @UseInterceptors(ChannelValidationInterceptor)
+  async inviteChannel(
+    @ConnectedSocket() client,
+    @MessageBody()
+    { roomName, user, clientUser, channel }: any,
+  ) {
+    console.log('channel-invite: ', roomName, user, clientUser, channel);
+
+    this.server
+      .to(this.usMapper.get(user.id))
+      .emit('user-channel-invited', { roomName, clientUser });
+
+    return `Invitation message sent.`;
   }
 }
