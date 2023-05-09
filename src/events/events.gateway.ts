@@ -11,6 +11,8 @@ import {
 import { randomBytes } from 'crypto';
 import { map } from 'rxjs';
 import { Server, Socket } from 'socket.io';
+import { MatchhistoryService } from 'src/matchhistory/matchhistory.service';
+import { UserService } from 'src/user/user.service';
 import {
   GameData,
   BallObject,
@@ -38,6 +40,8 @@ import {
 export class EventsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  constructor(private readonly matchhistoryService: MatchhistoryService,
+    private readonly userService: UserService,) {}
   @WebSocketServer()
   server: Server;
 
@@ -107,7 +111,7 @@ export class EventsGateway
       ball.velocityX = -ball.velocityX;
     }
 
-    const setId = setInterval(() => {
+    const setId = setInterval(async () => {
       const gameObject = this.gameRoom[roomName];
 
       gameObject.ball.x += gameObject.ball.velocityX;
@@ -197,7 +201,12 @@ export class EventsGateway
         const winScore = winner.score;
         const loseScore = loser.score;
         const winId = winner.nick;
-        const loserId = loser.nick;
+        const loserId = loser.nick;//닉네임임
+
+        //TODO : convert pk to intraID
+        const winUser = await this.userService.findNickname(winId);
+        const loseUser = await this.userService.findNickname(loserId);
+
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
         console.log(
@@ -208,12 +217,23 @@ export class EventsGateway
           winId,
           loserId,
         );
+        console.log(`winUser : ${winUser} ${winUser.id}`);
+        console.log(`loseUser : ${loseUser} ${loseUser.id}`);
+
+        await this.matchhistoryService.createMatchHistory( ExitStatus.GRACEFUL_SHUTDOWN,
+          gameType,
+          winScore,
+          loseScore,
+          winUser.id,
+          loseUser.id,
+        );
+        console.log('데이터 저장 완료');
 
         // remove socket room
         delete this.gameRoom[roomName];
         this.server.socketsLeave(roomName);
       }
-    }, 40);
+    }, 20);
 
     // set Interval Id => if game end, need to clear setInterval
     this.intervalIds[roomName] = setId;
@@ -233,7 +253,7 @@ export class EventsGateway
   }
 
   // 연결된 socket이 끊어질때 동작하는 함수 - OnGatewayDisconnect 짝궁
-  handleDisconnect(client: any, ...args: any[]) {
+  async handleDisconnect(client: any, ...args: any[]) {
     // Get roomName and PlayerId that the client belongs to.
     if (this.socketRoomMap.get(client.id) !== undefined) {
       const roomName = this.socketRoomMap.get(client.id).roomName;
@@ -293,6 +313,19 @@ export class EventsGateway
 
         // Processing Database
         // Alee's TODO
+        // console.log(
+        //   ExitStatus.CRASH,
+        //   gameObject.type.flag,
+        //   winScore,
+        //   loseScore,
+        //   winId,
+        //   loserId,
+        // );
+
+        const winUser = await this.userService.findNickname(winId);
+        const loseUser = await this.userService.findNickname(loserId);
+
+        // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
         console.log(
           ExitStatus.CRASH,
           gameObject.type.flag,
@@ -301,6 +334,20 @@ export class EventsGateway
           winId,
           loserId,
         );
+        console.log(`winUser : ${winUser} ${winUser.id}`);
+        console.log(`loseUser : ${loseUser} ${loseUser.id}`);
+
+        await this.matchhistoryService.createMatchHistory( ExitStatus.CRASH,
+          gameObject.type.flag,
+          winScore,
+          loseScore,
+          winUser.id,
+          loseUser.id,
+        );
+
+
+
+
 
         // remove socket(real socket) room
         this.server.socketsLeave(roomName);
@@ -316,6 +363,7 @@ export class EventsGateway
   @SubscribeMessage('handleKeyPressUp')
   async handleKeyPressUp(@ConnectedSocket() client, @MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
+    console.log(roomName, id);
     if (id === 1) {
       this.gameRoom[roomName].left.state = 1;
     } else if (id === 2) {
@@ -327,6 +375,7 @@ export class EventsGateway
   @SubscribeMessage('handleKeyPressDown')
   async handleKeyPressDown(@ConnectedSocket() client, @MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
+    console.log(roomName, id);
     if (id === 1) {
       this.gameRoom[roomName].left.state = 2;
     } else if (id === 2) {
@@ -338,6 +387,7 @@ export class EventsGateway
   @SubscribeMessage('handleKeyRelUp')
   async handleKeyRelUp(@ConnectedSocket() client, @MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
+    console.log(roomName, id);
     if (id === 1) {
       this.gameRoom[roomName].left.state = 0;
     } else if (id === 2) {
@@ -349,6 +399,7 @@ export class EventsGateway
   @SubscribeMessage('handleKeyRelDown')
   async handleKeyRelDown(@ConnectedSocket() client, @MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
+    console.log(roomName, id);
     if (id === 1) {
       this.gameRoom[roomName].left.state = 0;
     } else if (id === 2) {
@@ -439,6 +490,7 @@ export class EventsGateway
           leftPlayerNick: left.nickName,
           rightPlayerNick: right.nickName,
           roomName: roomName,
+          gameType: gameType,
         },
       };
       this.server.to(roomName).emit('matchingcomplete', responseMessage);
@@ -613,7 +665,7 @@ export class EventsGateway
     this.server.to(client.id).emit('invite complete');
   }
 
-  @SubscribeMessage('playerBackspace')
+  @SubscribeMessage('playerBackspace')// TODO
   async BackClick(@ConnectedSocket() client, @MessageBody() data) {
     const { roomName, nickName } = data;
 
@@ -643,14 +695,28 @@ export class EventsGateway
       const winId: string = winner.nick;
       const loserId: string = loser.nick;
 
-      console.log(
-        ExitStatus.CRASH,
-        gameType,
-        winScore,
-        loseScore,
-        winId,
-        loserId,
-      );
+      const winUser = await this.userService.findNickname(winId);
+        const loseUser = await this.userService.findNickname(loserId);
+
+        // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
+        console.log(
+          ExitStatus.CRASH,
+          gameObject.type.flag,
+          winScore,
+          loseScore,
+          winId,
+          loserId,
+        );
+        console.log(`winUser : ${winUser} ${winUser.id}`);
+        console.log(`loseUser : ${loseUser} ${loseUser.id}`);
+
+        await this.matchhistoryService.createMatchHistory( ExitStatus.CRASH,
+          gameObject.type.flag,
+          winScore,
+          loseScore,
+          winUser.id,
+          loseUser.id,
+        );
 
       // remove socket room
       delete this.gameRoom[roomName];
