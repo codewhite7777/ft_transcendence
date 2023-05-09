@@ -14,7 +14,7 @@ import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { FTAuthGuard } from './ft_auth_guard';
 
-@UseGuards(FTAuthGuard)
+//@UseGuards(FTAuthGuard)
 @Controller('/auth')
 export class AuthController {
   constructor(
@@ -30,9 +30,14 @@ export class AuthController {
     let redirectURL = 'http://localhost:3001/loginok'; //main page url
     //42 Resource 서버에 인트라 아이디 정보 요청
 
-    //42 Resource 서버에서 인증된 AccessToken값 응답 확인
-    const accessToken: string = req.user;
+    //const accessToken: string = req.user;
+    const authorizationCode = req.query.code;
 
+    //42 Resource 서버에서 인증된 AccessToken값 응답 확인
+    //console.log('req.user: ', req.user);
+    const accessToken = await this.authService.getAccessToken(
+      authorizationCode,
+    );
     //42 Server에 client & AccessToken을 사용하여 API 호출
     const intraData = await this.authService.getIntraData(accessToken);
 
@@ -50,7 +55,10 @@ export class AuthController {
     }
 
     //세션 중복 확인
-    if (this.userService.getSession(intraData['login']) != undefined) {
+    // 이미 해당 세션에 대한 데이터가 존재할 경우, 진행을 거부한다.
+    const storedSession = this.userService.getSession(intraData['login']);
+    console.log('storedSession: ', storedSession);
+    if (storedSession != undefined) {
       throw new NotAcceptableException('Session already connected');
     }
 
@@ -89,5 +97,27 @@ export class AuthController {
     }
     res.redirect(redirectURL);
     return;
+  }
+
+  @Get('/login')
+  login(@Res() res: Response) {
+    // Redirect users to the OAuth2 provider's authorization page
+    const authorizationURL = `https://api.intra.42.fr/oauth/authorize?client_id=${this.configService.get<string>(
+      'CLIENT_UID',
+    )}&redirect_uri=${this.configService.get<string>(
+      'REDIRECT_URL',
+    )}&response_type=code`;
+    res.redirect(authorizationURL);
+  }
+
+  // Debug End Point
+  @UseGuards(FTAuthGuard)
+  @Get('/gshim')
+  gshimFunction() {
+    return 'gshim';
+  }
+  @Get('/alee')
+  aleeFunction() {
+    return 'alee';
   }
 }

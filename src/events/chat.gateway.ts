@@ -15,12 +15,13 @@ import { User } from '../typeorm/entities/User';
 import { UserService } from '../user/user.service';
 import { EventResponse } from './eventResponse.interface';
 import { CreateChannelValidationPipe } from '../pipes/chat.pipe';
-import { UseFilters, UseInterceptors } from '@nestjs/common';
+import { UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
 import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
 import * as bcrypt from 'bcrypt';
 import { ChannelValidationPipe } from 'src/pipes/chat.pipe';
 import { ChannelValidationInterceptor } from 'src/intercept/ChannelValidation.intercept';
+import { SocketAuthGuard } from 'src/auth/socket_auth_guard';
 
 type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
 
@@ -34,6 +35,7 @@ type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
     credentials: true,
   },
 }) // 무조건 만들어야 에러가 안나게 하는부분인가봄.
+@UseGuards(SocketAuthGuard)
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -550,7 +552,7 @@ export class ChatGateway
 
     this.server
       .to(this.usMapper.get(user.id))
-      .emit('user-channel-invited', { roomName, clientUser });
+      .emit('user-channel-invited', { channel, clientUser });
 
     return `Invitation message sent.`;
   }
