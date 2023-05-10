@@ -562,21 +562,6 @@ export class EventsGateway
     this.server.to(client.id).emit('cancel queue complete', 200);
   }
 
-  @SubscribeMessage('want observer')
-  async WatchingGame(@ConnectedSocket() client, @MessageBody() data) {
-    const { nickName }: { nickName: string } = data;
-    const sock: SocketInfo = this.socketRoomMap.get(nickName);
-    if (sock !== undefined) {
-      const roomName: string = sock.roomName;
-      client.join(roomName);
-      this.server.to(roomName).emit('matchingcomplete', 200, roomName);
-      // this.server.to(client.id).emit('game observer', 200);
-      // this.server.to(client.id).emit('isLeft', 3);
-    } else {
-      this.server.to(client.id).emit('observer fail', 200);
-    }
-  }
-
   // sessionMap:[nick, socket]
   private sessionMap = {};
   @SubscribeMessage('Invite Game')
