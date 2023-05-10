@@ -361,49 +361,60 @@ export class EventsGateway
 
   // press Up key
   @SubscribeMessage('handleKeyPressUp')
-  async handleKeyPressUp(@ConnectedSocket() client, @MessageBody() message) {
+  async handleKeyPressUp(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
     console.log(roomName, id);
-    if (id === 1) {
-      this.gameRoom[roomName].left.state = 1;
-    } else if (id === 2) {
-      this.gameRoom[roomName].right.state = 1;
+    if (this.gameRoom[roomName] !== undefined)
+    {
+      if (id === 1) {
+        this.gameRoom[roomName].left.state = 1;
+      } else if (id === 2) {
+        this.gameRoom[roomName].right.state = 1;
+      }
     }
   }
 
   // press Down key
   @SubscribeMessage('handleKeyPressDown')
-  async handleKeyPressDown(@ConnectedSocket() client, @MessageBody() message) {
+  async handleKeyPressDown( @MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
     console.log(roomName, id);
-    if (id === 1) {
-      this.gameRoom[roomName].left.state = 2;
-    } else if (id === 2) {
-      this.gameRoom[roomName].right.state = 2;
+    if (this.gameRoom[roomName] !== undefined)
+    {
+      if (id === 1) {
+        this.gameRoom[roomName].left.state = 2;
+      } else if (id === 2) {
+        this.gameRoom[roomName].right.state = 2;
+      }
     }
   }
 
   // release Up Key
   @SubscribeMessage('handleKeyRelUp')
-  async handleKeyRelUp(@ConnectedSocket() client, @MessageBody() message) {
+  async handleKeyRelUp(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
-    console.log(roomName, id);
-    if (id === 1) {
-      this.gameRoom[roomName].left.state = 0;
-    } else if (id === 2) {
-      this.gameRoom[roomName].right.state = 0;
+    if (this.gameRoom[roomName] !== undefined)
+    {
+      if (id === 1) {
+        this.gameRoom[roomName].left.state = 0;
+      } else if (id === 2) {
+        this.gameRoom[roomName].right.state = 0;
+      }
     }
   }
 
   // release Down Key
   @SubscribeMessage('handleKeyRelDown')
-  async handleKeyRelDown(@ConnectedSocket() client, @MessageBody() message) {
+  async handleKeyRelDown(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
     console.log(roomName, id);
-    if (id === 1) {
-      this.gameRoom[roomName].left.state = 0;
-    } else if (id === 2) {
-      this.gameRoom[roomName].right.state = 0;
+    if (this.gameRoom[roomName] !== undefined)
+    {
+      if (id === 1) {
+        this.gameRoom[roomName].left.state = 0;
+      } else if (id === 2) {
+        this.gameRoom[roomName].right.state = 0;
+      }
     }
   }
 
