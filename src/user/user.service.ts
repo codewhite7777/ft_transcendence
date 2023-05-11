@@ -111,11 +111,11 @@ export class UserService {
     if (userData == null || intraID == undefined) {
       return false;
     }
-    if (result.win) {
+    if (result.result.win) {
       await this.userRepository.increment({ id: userData.id }, 'wincount', 1);
       await this.userRepository.increment({ id: userData.id }, 'rating', 1);
     }
-    if (result.lose) {
+    if (result.result.lose) {
       await this.userRepository.increment({ id: userData.id }, 'losecount', 1);
       await this.userRepository.increment({ id: userData.id }, 'rating', -1);
     }
