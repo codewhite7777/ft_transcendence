@@ -6,7 +6,7 @@ import { MatchhistoryService } from 'src/matchhistory/matchhistory.service';
 import { UserModule } from 'src/user/user.module';
 import { userProviders } from 'src/user/user.providers';
 import { UserService } from 'src/user/user.service';
-import { EventsGateway } from './events.gateway';
+import EventsGateway from './events.gateway';
 
 @Module({
   imports: [ChatModule, DatabaseModule, UserModule],
