@@ -550,6 +550,7 @@ export default class EventsGateway
     // check 용도
     let isInQueueFlag: boolean = false;
 
+    // travel normal queue
     for (var i = 0; i < this.matchNormalQueue.length; i++) {
       console.log(this.matchNormalQueue[i].socket.id, client.id);
       if (this.matchNormalQueue[i].socket.id === client.id) {
@@ -558,6 +559,8 @@ export default class EventsGateway
         break;
       }
     }
+
+    // travel extend queue
     for (var i = 0; i < this.matchNormalQueue.length; i++) {
       if (this.matchExtendQueue[i].socket.id === client.id) {
         this.matchExtendQueue.splice(i, 1);
@@ -569,6 +572,7 @@ export default class EventsGateway
     // call back 용 response message
     const responseMessage = {state: 0, message: ""};
 
+    // Creating Messages Based on Results
     if (isInQueueFlag) {  // found in server Queue(normal or extend)
       // success
       responseMessage.state = 200;
