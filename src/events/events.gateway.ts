@@ -566,23 +566,19 @@ export default class EventsGateway
       }
     }
     
+    // call back 용 response message
+    const responseMessage = {state: 0, message: ""};
+
     if (isInQueueFlag) {  // found in server Queue(normal or extend)
       // success
-      const responseMessage = { state: 200,
-        message: `client socket id ${client.id}가 발견되었습니다.`,
-        dataObject: {},
-      };
-
-      // event 발생
-      this.server.to(client.id).emit('cancel queue complete', responseMessage);
+      responseMessage.state = 200;
+      responseMessage.message = `client socket id ${client.id}가 발견되었습니다.`;
     } else {              // not found Error 
       // fail
-      const responseMessage = { state: 404,
-        message: `client socket id ${client.id}가 발견되지못했습니다. 문제를 해결하십시요. 휴먼`,
-        dataObject: {},
-      };
-      this.server.to(client.id).emit('cancel queue complete', responseMessage);
+      responseMessage.state = 404;
+      responseMessage.message = `client socket id ${client.id}가 발견되지못했습니다. 문제를 해결하십시요. 휴먼`;
     }
+    return responseMessage;
   }
 
   // sessionMap:[nick, socket]
