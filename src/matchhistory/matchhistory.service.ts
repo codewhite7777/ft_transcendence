@@ -39,6 +39,25 @@ export class MatchhistoryService {
     matchHistory.losescore = losescore;
     matchHistory.winner = await this.userService.findUserByID(winnerid);
     matchHistory.loser = await this.userService.findUserByID(loserid);
+
+    //승패기록
+    await this.userService.updateResult(matchHistory.winner.intraid, {
+      "result": {
+        "win": true,
+        "lose": false
+      }
+    });
+  
+    await this.userService.updateResult(matchHistory.loser.intraid, {
+      "result": {
+        "win": false,
+        "lose": true
+      }
+    });
+
+
+
+
     return this.matchHistoryRepository.save(matchHistory);
   }
 
