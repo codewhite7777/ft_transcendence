@@ -37,7 +37,7 @@ import {
     credentials: true,
   },
 }) // 무조건 만들어야 에러가 안나게 하는부분인가봄.
-export class EventsGateway
+export default class EventsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   constructor(private readonly matchhistoryService: MatchhistoryService,
@@ -200,25 +200,27 @@ export class EventsGateway
             : gameObject.right;
         const winScore = winner.score;
         const loseScore = loser.score;
-        const winId = winner.nick;
-        const loserId = loser.nick;//닉네임임
+        const winIntraId = winner.intraId;
+        const loseIntraId = loser.intraId;
 
         //TODO : convert pk to intraID
-        const winUser = await this.userService.findNickname(winId);
-        const loseUser = await this.userService.findNickname(loserId);
+        const winUser = await this.userService.findUser(winIntraId);
+        const loseUser = await this.userService.findUser(loseIntraId);
+
+        console.log("win user ", winUser);
+        console.log("lose user ", loseUser);
 
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
+        console.log("ExitStatus.GRACEFUL_SHUTDOWN");
         console.log(
           ExitStatus.GRACEFUL_SHUTDOWN,
           gameType,
           winScore,
           loseScore,
-          winId,
-          loserId,
+          winUser.id,
+          loseUser.id,
         );
-        console.log(`winUser : ${winUser} ${winUser.id}`);
-        console.log(`loseUser : ${loseUser} ${loseUser.id}`);
 
         await this.matchhistoryService.createMatchHistory( ExitStatus.GRACEFUL_SHUTDOWN,
           gameType,
@@ -345,10 +347,6 @@ export class EventsGateway
           loseUser.id,
         );
 
-
-
-
-
         // remove socket(real socket) room
         this.server.socketsLeave(roomName);
       }
@@ -421,10 +419,9 @@ export class EventsGateway
   // socket의 메시지를 room내부의 모든 이들에게 전달합니다.
   @SubscribeMessage('match')
   async enqueueMatch(@ConnectedSocket() client: Socket, @MessageBody() data) {
-    // parameter {gametype, nickName}
-    const { gameType, nickName }: { gameType: MapStatus; nickName: string } =
-      data;
-    console.log('my:nick', nickName);
+    // parameter {gametype, intraId}
+    const { gameType, intraId, pk }: { gameType: MapStatus; intraId: string, pk:number } = data;
+    console.log('my:nick', intraId);
 
     // ############ Error logic ############
     // check invalid gameType
@@ -433,8 +430,8 @@ export class EventsGateway
       return;
     }
 
-    // check invalid nickName
-    if (nickName === undefined || nickName === '') {
+    // check invalid intraId
+    if (intraId === undefined || intraId === '') {
       this.server.to(client.id).emit('enqueuecomplete', 404);
       return;
     }
@@ -444,7 +441,7 @@ export class EventsGateway
     const queueData: QueueObject = createQueueObject({
       socket: client,
       gameType,
-      nickName,
+      intraId: intraId,
     });
 
     // divide queue(normal, extend)
@@ -478,12 +475,12 @@ export class EventsGateway
 
       const roomName = randomBytes(10).toString('hex');
       const newGameObject: GameData = createGameData(
-        createLeftPlayerObject({ nick: left.nickName }),
-        createRightPlayerObject({ nick: right.nickName }),
+        createLeftPlayerObject({ intraId: left.intraId }),
+        createRightPlayerObject({ intraId: right.intraId }),
         createBallObject(),
         createGameType(gameType),
       );
-      // nickname add part
+      // intraId add part
       this.gameRoom[roomName] = newGameObject;
       left.socket.join(roomName); // TODO
       right.socket.join(roomName); // TODO
@@ -494,19 +491,26 @@ export class EventsGateway
       this.socketRoomMap.set(right.socket.id, rightInfo);
 
       // {state, message, dataObject {} }
+
+      const leftUser = await this.userService.findUser(left.intraId);
+      const rightUser = await this.userService.findUser(right.intraId);
       const responseMessage = {
         state: 200,
         message: "good in 'match'",
         dataObject: {
-          leftPlayerNick: left.nickName,
-          rightPlayerNick: right.nickName,
+          leftUser,
+          rightUser,
+          // leftPlayerNick: left.intraId,
+          // rightPlayerNick: right.intraId,
+
+          leftSockId:left.socket.id,
+          rightSockId:right.socket.id,
           roomName: roomName,
           gameType: gameType,
         },
       };
+      // 이벤트를 발생시켜서, 
       this.server.to(roomName).emit('matchingcomplete', responseMessage);
-      this.server.to(left.socket.id).emit('isLeft', 1);
-      this.server.to(right.socket.id).emit('isLeft', 2);
 
       console.log('matching 완료');
       this.startGame(roomName);
@@ -523,14 +527,14 @@ export class EventsGateway
         const responseMessage = {
           state: 200,
           message: 'Test',
-          dataObject: { player: left.nick },
+          dataObject: { player: left.intraId },
         };
         this.server.to(roomName).emit('gameover', responseMessage); // TODO
       } else if (right.score >= this.maxGoalScore) {
         const responseMessage = {
           state: 200,
           message: 'Test',
-          dataObject: { player: right.nick },
+          dataObject: { player: right.intraId },
         };
         this.server.to(roomName).emit('gameover', responseMessage); // TODO
       }
@@ -542,24 +546,43 @@ export class EventsGateway
   // cancel queue event
   // param[socketId]
   @SubscribeMessage('cancel queue')
-  async cancelQueue(@ConnectedSocket() client, @MessageBody() data) {
-    if (data === false) {
-      for (var i = 0; i < this.matchNormalQueue.length; i++) {
-        console.log(this.matchNormalQueue[i].socket.id, client.id);
-        if (this.matchNormalQueue[i].socket.id === client.id) {
-          this.matchNormalQueue.splice(i, 1);
-          break;
-        }
-      }
-    } else {
-      for (var i = 0; i < this.matchNormalQueue.length; i++) {
-        if (this.matchExtendQueue[i].socket.id === client.id) {
-          this.matchExtendQueue.splice(i, 1);
-          break;
-        }
+  async cancelQueue(@ConnectedSocket() client) {
+    // check 용도
+    let isInQueueFlag: boolean = false;
+
+    for (var i = 0; i < this.matchNormalQueue.length; i++) {
+      console.log(this.matchNormalQueue[i].socket.id, client.id);
+      if (this.matchNormalQueue[i].socket.id === client.id) {
+        this.matchNormalQueue.splice(i, 1);
+        isInQueueFlag = true;
+        break;
       }
     }
-    this.server.to(client.id).emit('cancel queue complete', 200);
+    for (var i = 0; i < this.matchNormalQueue.length; i++) {
+      if (this.matchExtendQueue[i].socket.id === client.id) {
+        this.matchExtendQueue.splice(i, 1);
+        isInQueueFlag = true;
+        break;
+      }
+    }
+    
+    if (isInQueueFlag) {  // found in server Queue(normal or extend)
+      // success
+      const responseMessage = { state: 200,
+        message: `client socket id ${client.id}가 발견되었습니다.`,
+        dataObject: {},
+      };
+
+      // event 발생
+      this.server.to(client.id).emit('cancel queue complete', responseMessage);
+    } else {              // not found Error 
+      // fail
+      const responseMessage = { state: 404,
+        message: `client socket id ${client.id}가 발견되지못했습니다. 문제를 해결하십시요. 휴먼`,
+        dataObject: {},
+      };
+      this.server.to(client.id).emit('cancel queue complete', responseMessage);
+    }
   }
 
   // sessionMap:[nick, socket]
@@ -624,8 +647,8 @@ export class EventsGateway
 
     // 3-3. create GameObject
     const newGameObject: GameData = createGameData(
-      createLeftPlayerObject({ nick: 'alee' }),
-      createRightPlayerObject({ nick: 'hena' }), // TODO
+      createLeftPlayerObject({ intraId: 'alee' }),
+      createRightPlayerObject({ intraId: 'hena' }), // TODO
       createBallObject(),
       createGameType(gameType),
     );
@@ -651,9 +674,7 @@ export class EventsGateway
         roomName: roomName,
       },
     };
-    this.server.to(roomName).emit('matchingcomplete', 200, responseMessage);
-    this.server.to(client.id).emit('isLeft', 1);
-    this.server.to(socketData.id).emit('isLeft', 2);
+    this.server.to(roomName).emit('matchingcomplete', responseMessage);
 
     this.startGame(roomName);
 
@@ -688,23 +709,14 @@ export class EventsGateway
         data.left.nick === nickName ? data.left : data.right;
       const winScore: number = winner.score;
       const loseScore: number = loser.score;
-      const winId: string = winner.nick;
-      const loserId: string = loser.nick;
+      const winintraId: string = winner.intraId;
+      const loserintraId: string = loser.intraId;
 
-      const winUser = await this.userService.findNickname(winId);
-        const loseUser = await this.userService.findNickname(loserId);
+      const winUser = await this.userService.findNickname(winintraId);
+      const loseUser = await this.userService.findNickname(loserintraId);
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
-        console.log(
-          ExitStatus.CRASH,
-          gameObject.type.flag,
-          winScore,
-          loseScore,
-          winId,
-          loserId,
-        );
-        console.log(`winUser : ${winUser} ${winUser.id}`);
-        console.log(`loseUser : ${loseUser} ${loseUser.id}`);
+      console.log(ExitStatus.CRASH, gameObject.type.flag, winScore, loseScore, winintraId, loserintraId);
 
         await this.matchhistoryService.createMatchHistory( ExitStatus.CRASH,
           gameObject.type.flag,
@@ -721,7 +733,7 @@ export class EventsGateway
       const responseMessage = {
         state: 200,
         message: 'Test',
-        dataObject: { player: winner.nick },
+        dataObject: { player: winner.intraId },
       };
       this.server.to(roomName).emit('gameover', responseMessage);
     }
