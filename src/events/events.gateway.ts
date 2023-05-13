@@ -685,8 +685,8 @@ export default class EventsGateway
       dataObject: {
         leftUser,
         rightUser,
-        // leftPlayerNick: myIntraId,
-        // rightPlayerNick: oppintraId,
+        leftSockId:client.id,
+        rightSockId:this.sessionMap[rightUser.intraid].id,
         roomName: roomName,
         gameType: gameType,
       },
