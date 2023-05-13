@@ -607,17 +607,24 @@ export default class EventsGateway
     //   return responseMessage;
     // }
     // 3. return invite complete event
-    this.server.to(socketData.id).emit('invite message', myIntraId);
+    const test = await this.userService.findUser(myIntraId);
+    console.log(test);
+    this.server.to(socketData.id).emit('invite message', {user:test, gameType});
     const responseMessage = {state: 200, message: "초대 성공하였음."};
     return responseMessage;
   }
 
   @SubscribeMessage('Accept invitation')
   async InviteOK(@ConnectedSocket() client, @MessageBody() data) {
-    const { oppNickName, myNickName, enqueueFlag, gameType } = data;
+    const { myIntraId, oppintraId,  gameType } = data;
+
+    console.log("my data:", data);
+    console.log("my IntraId:", myIntraId);
+    console.log("opp IntraId:", oppintraId);
+    console.log("gametype:", gameType);
 
     // 1. Check if your opponent is online or offline
-    const socketData = this.sessionMap[oppNickName];
+    const socketData = this.sessionMap[oppintraId];
     console.log(socketData);
     if (socketData === undefined) {
       this.server.to(client.id).emit('invite fail');
@@ -632,15 +639,15 @@ export default class EventsGateway
     }
     // 3. return invite complete event
     // 3-1. remove my data in WaitingQueue
-    if (enqueueFlag === true) {
+    if (socketData.state === 'in-queue') {
       for (var i = 0; i < this.matchNormalQueue.length; i++) {
-        if (this.matchNormalQueue[i].socket.nickName === oppNickName) {
+        if (this.matchNormalQueue[i].socket.nickName === oppintraId) {
           this.matchNormalQueue.splice(i, 1);
           break;
         }
       }
       for (var i = 0; i < this.matchNormalQueue.length; i++) {
-        if (this.matchExtendQueue[i].socket.nickName === oppNickName) {
+        if (this.matchExtendQueue[i].socket.nickName === oppintraId) {
           this.matchExtendQueue.splice(i, 1);
           break;
         }
@@ -674,8 +681,8 @@ export default class EventsGateway
       state: 200,
       message: "good in 'match'",
       dataObject: {
-        leftPlayerNick: myNickName,
-        rightPlayerNick: oppNickName,
+        leftPlayerNick: myIntraId,
+        rightPlayerNick: oppintraId,
         roomName: roomName,
       },
     };
