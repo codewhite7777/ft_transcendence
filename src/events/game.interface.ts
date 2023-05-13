@@ -25,22 +25,22 @@ flag: number;
 };
 
 export interface BallObject {
-x: number;
-y: number;
-radius: number;
-speed: number;
-velocityX: number;
-velocityY: number;
+  x: number;
+  y: number;
+  radius: number;
+  speed: number;
+  velocityX: number;
+  velocityY: number;
 };
 
 export interface PlayerObject {
-x: number;
-y: number;
-width: number;
-height: number;
-score: number;
-state: number;
-nick: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  score: number;
+  state: number;
+  intraId: string;
 };
 
 export function createGameType(
@@ -56,9 +56,9 @@ export function createLeftPlayerObject({
   height = 100,
   score = 0,
   state = 0,
-  nick = '',
+  intraId = '',
 }): PlayerObject {
-return { x, y, width, height, score, state, nick };
+return { x, y, width, height, score, state, intraId };
 }
 
 export function createRightPlayerObject({
@@ -68,9 +68,9 @@ export function createRightPlayerObject({
   height = 100,
   score = 0,
   state = 0,
-  nick = '',
+  intraId = '',
 }): PlayerObject {
-return { x, y, width, height, score, state, nick };
+return { x, y, width, height, score, state, intraId };
 }
 
 export function createBallObject(
@@ -92,15 +92,15 @@ export interface SocketInfo {
 export interface QueueObject{
   socket: Socket,
   gameType: MapStatus
-  nickName: string
+  intraId: string
 };
 
 export function createQueueObject({
   socket,
   gameType = 0,
-  nickName = '',
+  intraId = '',
 }): QueueObject {
-return { socket, gameType, nickName };
+return { socket, gameType, intraId };
 }
 
 export enum ExitStatus {
