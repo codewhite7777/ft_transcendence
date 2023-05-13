@@ -16,16 +16,18 @@ import { UserService } from '../user/user.service';
 import { EventResponse } from './eventResponse.interface';
 import { CreateChannelValidationPipe } from '../pipes/chat.pipe';
 import { UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
-import { SocketParameterValidationExceptionFilter } from './exceptionFilter';
-import { Channelinfo } from 'src/typeorm/entities/Channelinfo';
+import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import * as bcrypt from 'bcrypt';
-import { ChannelValidationPipe } from 'src/pipes/chat.pipe';
-import { ChannelValidationInterceptor } from 'src/intercept/ChannelValidation.intercept';
-import { SocketAuthGuard } from 'src/auth/socket_auth_guard';
+import {
+  ChannelValidationInterceptor,
+  ClientValidationInterceptor,
+  RoomValidationInterceptor,
+  UserValidationInterceptor,
+} from '../intercept/ChannelValidation.intercept';
+import { SocketAuthGuard } from '../auth/socket_auth_guard';
 
 type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
 
-// 이 설정들이 뭘하는건지, 애초에 무슨 레포를 보고 이것들을 찾을 수 있는지 전혀 모르겠다.
 @WebSocketGateway(4242, {
   namespace: '/chat',
   cors: {
@@ -34,7 +36,7 @@ type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
     transports: ['websocket', 'polling'],
     credentials: true,
   },
-}) // 무조건 만들어야 에러가 안나게 하는부분인가봄.
+})
 @UseGuards(SocketAuthGuard)
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -56,48 +58,50 @@ export class ChatGateway
   }
 
   afterInit(server: Server) {
-    console.log('Chat Socket initialized');
+    console.log('Chat Server initialized');
   }
 
   // Todo 클라이언트가 어떤 유저인지 파악하고, 해당 유저가 db상으로 참여한 방을 찾은후 입장시켜야 한다.
   // 입장시켰고, 입장한 채널info 목록을 프론트에게 전달해야 한다.
-  async handleConnection(client: any, ...args: any[]) {
+  async handleConnection(client: any, ...args: any[]): Promise<EventResponse> {
     console.log(`Chat Client connected: ${client.id}: `);
     const userId: number = parseInt(client?.handshake?.headers?.userid, 10);
-    if (userId) {
-      this.usMapper.set(userId, client.id);
-      // 유저가 db상으로 접속된 채널 목록을 가져온다.
-      const channels: Channelinfo[] =
-        await this.chatService.getChannelInfoByUser(userId);
-      //console.log('channels: ', channels);
-      // 유저를 채널 목록들에 모두 join시킨다.
-      channels.forEach((channel) => {
-        client.join(channel.ch.roomname);
-      });
+    if (!userId) return;
+    this.usMapper.set(userId, client.id);
+    // 유저가 db상으로 접속된 채널 목록을 가져온다.
+    const channels: Channelinfo[] = await this.chatService.getChannelInfoByUser(
+      userId,
+    );
+    console.log('현재 유저가 db상으로 join한 채널 목록: ', channels);
+    //console.log('channels: ', channels);
+    // 유저를 채널 목록들에 모두 join시킨다.
+    channels.forEach((channel) => {
+      client.join(channel.ch.roomname);
+    });
 
-      // made by gpt 🤖
-      const channelswithSocketId = channels.map((channel) => ({
-        id: channel.ch.id,
-        name: channel.ch.roomname,
-        kind: channel.ch.kind,
-        users: channel.ch.channelinfos.map((channelinfo) => ({
-          id: channelinfo.user.id,
-          nickname: channelinfo.user.nickname,
-          intraId: channelinfo.user.intraid,
-          socketId: this.usMapper.get(channelinfo.userid),
-          avatar: channelinfo.user.avatar,
-          status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
-          isOwner: channelinfo.isowner,
-          isAdmin: channelinfo.isadmin,
-        })),
-        showUserList: false,
-      }));
+    // made by gpt 🤖
+    const channelswithSocketId = channels.map((channel) => ({
+      id: channel.ch.id,
+      name: channel.ch.roomname,
+      kind: channel.ch.kind,
+      users: channel.ch.channelinfos.map((channelinfo) => ({
+        id: channelinfo.user.id,
+        nickname: channelinfo.user.nickname,
+        intraId: channelinfo.user.intraid,
+        socketId: this.usMapper.get(channelinfo.userid),
+        avatar: channelinfo.user.avatar,
+        status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
+        isOwner: channelinfo.isowner,
+        isAdmin: channelinfo.isadmin,
+      })),
+      showUserList: false,
+    }));
 
-      client.emit(
-        'initChannels',
-        this.createEventResponse(true, '', channelswithSocketId),
-      );
-    }
+    client.emit(
+      'initChannels',
+      this.createEventResponse(true, '', channelswithSocketId),
+    );
+    return this.createEventResponse(true, 'connect success', []);
   }
 
   // 누가 disconnect했는지 어떻게 알지?
@@ -137,11 +141,6 @@ export class ChatGateway
     };
   }
 
-  getNumberOfSocketsInRoom(roomName) {
-    const room = this.server.of('/').adapter.rooms.get(roomName);
-    return room ? room.size : 0;
-  }
-
   isMuted(client: Socket, roomName: string) {
     // Get the roomMutedUsers Map for the specified roomId
     const roomMutedUsers = this.mutedUsers.get(roomName);
@@ -170,22 +169,20 @@ export class ChatGateway
   // Chat Login Start
 
   @SubscribeMessage('createChannel')
-  @UseFilters(SocketParameterValidationExceptionFilter)
   async createChannel(
     @ConnectedSocket() client,
     @MessageBody(CreateChannelValidationPipe) data,
   ) {
     const { kind, roomName, roomPassword } = data;
-
-    // user 검증
-    const user: User = await this.userService.findUser(client.intraID);
-    if (user == null)
-      return this.createErrorEventResponse(`당신의 회원정보가 없습니다!`);
+    console.log('createChannel data: ', data);
+    console.log('client: ', client?.handshake);
     const socketUserId: number = parseInt(
       client?.handshake?.headers?.userid,
       10,
     );
-
+    const clientUser = await this.userService.findUserById(socketUserId);
+    if (clientUser === null)
+      return this.createErrorEventResponse('유저정보가없어용');
     // 채널 생성(중복검사 yes)
     // Todo. 비밀번호가 있는 채널을 생성할때는 어떻게 할까?
     const newChannel: Channel = await this.chatService.createChannel(
@@ -196,82 +193,128 @@ export class ChatGateway
     );
 
     // 방장을 참여.
-    await this.chatService.joinChannel(newChannel, user, true, true);
+    await this.chatService.joinChannel(newChannel, clientUser, true, true);
     client.join(roomName);
 
     const welcomeData = {
-      // num: this.server.sockets.adapter.rooms.get(roomName).size,
-      num: 10,
-      roomName,
+      kind: newChannel.kind,
+      name: roomName,
+      users: [{ clientUser, socketId: this.usMapper.get(socketUserId) }],
     };
     // client가 들어온 방의 제목을 전달합니다.
     client.emit('welcome', welcomeData);
-    return this.createEventResponse(true, '채널 생성 성공', [welcomeData]);
+    this.server.to(roomName).emit('user-join', { roomName, clientUser });
+    console.log('createChannel end');
+    return this.createEventResponse(true, 'join success', [welcomeData]);
   }
 
   @SubscribeMessage('getChannel')
   async getChannel(@ConnectedSocket() client, @MessageBody() data) {
-    console.log('detect getChannel: ', client.id, ' ', data);
-    //const { kind } = data;
-
-    // const channels = (await this.chatService.getChannelByKind(kind)).map(
-    // for debug
-    console.log('getAllChannel: ', await this.chatService.getAllChannel());
-
+    //console.log('detect getChannel: ', client.id, ' ', data);
+    //console.log('getAllChannel: ', await this.chatService.getAllChannel());
     const channels = (await this.chatService.getAllChannel()).map(
       (channel) => ({
+        id: channel.id,
         kind: channel.kind,
+        name: channel.roomname,
         owner: channel.owner.intraid,
-        roomname: channel.roomname,
       }),
     );
     console.log('getChannel', channels);
+    //client.emit('getChannel', this.createEventResponse(true, '', channels));
     client.emit('getChannel', channels);
     //return channels;
   }
 
   // Todo. user가 채널에서 mute상태인지 확인합니다.
   @SubscribeMessage('chat')
+  @UseInterceptors(RoomValidationInterceptor)
   async handleChat(@ConnectedSocket() client, @MessageBody() data) {
-    const { roomName, message } = data;
+    const { roomName, message, channel } = data;
     console.log(`[${roomName}] ${message}`);
+
+    // 검증
+    const socketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    const clientUser = await this.userService.findUserById(socketUserId);
+    if (clientUser === null) {
+      return this.createErrorEventResponse(`당신의 user정보가 없습니다.`);
+    }
 
     if (this.isMuted(client, roomName))
       return this.createErrorEventResponse(
         `당신은 ${this.mutedUsers.get(client.id)}까지 mute된 상태입니다.`,
       );
 
+    // dm인 경우 targetRoom은 상대의 id가 된다.
+    //const targetRoom = channel?.kind === 3 ? roomName : roomName;
+    //console.log('target Room: ', targetRoom);
+    client.to(roomName).emit('chat', { roomName, user: clientUser, message });
+  }
+
+  //
+  @SubscribeMessage('dm')
+  @UseInterceptors(RoomValidationInterceptor)
+  @UseInterceptors(UserValidationInterceptor)
+  async handleDm(@ConnectedSocket() client, @MessageBody() data) {
+    const { roomName, message, channel, user } = data;
+    console.log(`[${roomName}] ${message}`);
+
+    // 검증
+    const socketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    const clientUser = await this.userService.findUserById(socketUserId);
+    if (clientUser === null) {
+      return this.createErrorEventResponse(`당신의 user정보가 없습니다.`);
+    }
+
     client
-      .to(roomName)
-      .emit('chat', { roomName, user: client.nickname, message });
+      .to(this.usMapper.get(user.id))
+      .emit('chat', { roomName, user: clientUser, message });
   }
 
   // socket을 특정 room에 join 시킵니다.
+  // Todo: 필터필요.
   // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
-  async handleJoin(
-    @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
-  ) {
-    const { userId, roomName, roomPassword } = data;
-    console.log('joinChannel: ', userId, ', ', roomName);
+  async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
+    const { roomName, roomPassword } = data;
+    const socketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    const clientUser = await this.userService.findUserById(socketUserId);
+    if (clientUser === null)
+      return this.createErrorEventResponse('유저정보가없어용');
+    console.log(`joinChannel: ${roomName}`);
     if (client.rooms.has(roomName))
-      return `Error: 이미 해당 방에 참여중입니다.`;
+      return this.createErrorEventResponse(
+        `Error: 이미 해당 방에 참여중입니다.`,
+      );
 
     // join on db level
     // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
     const channel: Channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: Channel doesn't exist`;
-    const user: User = await this.userService.findUserById(userId);
-    if (user === null) return `Error: User doesn't exist`;
+    if (channel === null)
+      return this.createErrorEventResponse(`Error: Channel doesn't exist`);
+    const user: User = await this.userService.findUserById(socketUserId);
+    if (user === null)
+      this.createErrorEventResponse(`Error: User doesn't exist`);
 
     if (await this.chatService.isBanned(channel, user))
-      return `Error: 당신은 해당 채널에서 Ban 당했습니다.`;
+      return this.createErrorEventResponse(
+        `Error: 당신은 해당 채널에서 Ban 당했습니다.`,
+      );
 
     if (channel.kind === 1) {
-      if (roomPassword === undefined) return `Error: parameter error`;
+      if (roomPassword === undefined)
+        return this.createErrorEventResponse(`Error: parameter error`);
       if (!(await bcrypt.compare(roomPassword, channel.roompassword)))
-        return `Error: Wrong password`;
+        return this.createErrorEventResponse(`Error: Wrong password`);
     }
 
     await this.chatService.joinChannel(channel, user, false, false);
@@ -279,37 +322,52 @@ export class ChatGateway
     client.join(roomName);
 
     const welcomeData = {
+      id: channel.id,
       kind: channel.kind,
-      roomName,
+      name: roomName,
       users: channel.channelinfos.map((user) => ({
         ...user,
         socketId: this.usMapper.get(user.userid),
       })),
     };
     console.log('welcomeData: ', welcomeData);
-    this.server.to(roomName).emit('user-join', { roomName, userId });
-    return welcomeData;
+    this.server.to(roomName).emit('user-join', { roomName, socketUserId });
+    return this.createEventResponse(true, 'join success', [welcomeData]);
   }
 
   @SubscribeMessage('leftChannel')
   async handleLeft(
     @ConnectedSocket() client,
-    @MessageBody(ChannelValidationPipe) data,
+    @MessageBody() data,
   ) {
-    const { roomName, userId } = data;
-    if (!roomName || !userId)
-      return `Error: 필요한 인자가 주어지지 않았습니다.`;
-    console.log('leftChannel event: ', roomName, userId);
+    const { roomName } = data;
+    if (!roomName)
+      return this.createErrorEventResponse(
+        `Error: 필요한 인자가 주어지지 않았습니다.`,
+      );
+    const socketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+    const clientUser = await this.userService.findUserById(socketUserId);
+    if (clientUser === null)
+      return this.createErrorEventResponse('유저정보가없어용');
+    console.log('leftChannel event: ', roomName);
 
     if (!client.rooms.has(roomName))
-      return `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`;
+      return this.createErrorEventResponse(
+        `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`,
+      );
 
     const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null) return `Error: 알수없는 채널입니다. ${roomName}`;
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
-    if (channel.owner.id === userId)
-      return `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`;
+    if (channel === null)
+      return this.createErrorEventResponse(
+        `Error: 알수없는 채널입니다. ${roomName}`,
+      );
+    if (channel.owner.id === socketUserId)
+      return this.createErrorEventResponse(
+        `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`,
+      );
 
     this.server
       .to(roomName)
@@ -317,9 +375,14 @@ export class ChatGateway
         'chat',
         `Server🤖: User ${client.id} has left the room ${roomName}`,
       );
+    this.server.to(roomName).emit('user-join', { roomName, clientUser });
     client.leave(roomName);
-    await this.chatService.leftChannel(channel, user);
-    return `Success: 채널 ${roomName}에서 클라이언트 ${user.intraid}가 성공적으로 퇴장했습니다.`;
+    await this.chatService.leftChannel(channel, clientUser);
+    return this.createEventResponse(
+      true,
+      `Success: 채널 ${roomName}에서 클라이언트 ${clientUser.nickname}가 성공적으로 퇴장했습니다.`,
+      [],
+    );
   }
 
   // 특정 채널에서 owner를 내 자신에서 이 사람으로 넘깁니다.
@@ -554,6 +617,29 @@ export class ChatGateway
       .to(this.usMapper.get(user.id))
       .emit('user-channel-invited', { channel, clientUser });
 
-    return `Invitation message sent.`;
+    return this.createEventResponse(true, `Invitation message sent.`, []);
+  }
+
+  //Todo.인터셉터생성.
+  @SubscribeMessage('createDm')
+  @UseInterceptors(ClientValidationInterceptor)
+  @UseInterceptors(UserValidationInterceptor)
+  async directMessage(
+    @ConnectedSocket() client,
+    @MessageBody()
+    { user, clientUser }: any,
+  ) {
+    console.log('directMessage: ', user, clientUser);
+
+    this.server
+      .to(this.usMapper.get(user.id))
+      //.to(this.usMapper.get(2))
+      .emit('user-dm', this.chatService.createDm(user, clientUser));
+
+    return this.createEventResponse(
+      true,
+      `DM 채널을 성공적으로 생성하였습니다.`,
+      [this.chatService.createDm(clientUser, user)],
+    );
   }
 }

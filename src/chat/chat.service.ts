@@ -55,6 +55,18 @@ export class ChatService {
     return this.channelRepository.save(newChannel);
   }
 
+  createDm(me: User, user: User) {
+    return {
+      id: 0,
+      kind: 3,
+      name: `[DM]${user.nickname}`,
+      owner: user,
+      users: [me, user],
+      showUserList: false,
+      chatHistory: [],
+    };
+  }
+
   // read channel
   async getAllChannel() {
     return this.channelRepository.find({
@@ -224,7 +236,7 @@ export class ChatService {
       await this.channelBlacklistRepository.findOne({
         where: { channelId: ch.id, userId: user.id },
       });
-      console.log('isBanned] channelBlacklist: ', channelBlacklist);
+    console.log('isBanned] channelBlacklist: ', channelBlacklist);
     return !(channelBlacklist === null);
   }
 
