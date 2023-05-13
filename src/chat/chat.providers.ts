@@ -1,4 +1,4 @@
-import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
+import { channelBlacklist } from '../typeorm/entities/ChannelBlacklist';
 import { Channel } from '../typeorm/entities/Channel';
 import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import { DataSource } from 'typeorm';
