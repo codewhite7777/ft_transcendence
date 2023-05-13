@@ -660,8 +660,8 @@ export default class EventsGateway
 
     // 3-3. create GameObject
     const newGameObject: GameData = createGameData(
-      createLeftPlayerObject({ intraId: 'alee' }),
-      createRightPlayerObject({ intraId: 'hena' }), // TODO
+      createLeftPlayerObject({ intraId: myIntraId }),
+      createRightPlayerObject({ intraId: oppintraId }), // TODO
       createBallObject(),
       createGameType(gameType),
     );
@@ -677,14 +677,18 @@ export default class EventsGateway
     this.socketRoomMap.set(socketData.id, rightInfo);
 
     // 3-5. both set id
-    // const responseMessage = {state:200, message:"Test", dataObject:{player:winner.nick}};
+    const leftUser = await this.userService.findUser(myIntraId);
+    const rightUser = await this.userService.findUser(oppintraId);
     const responseMessage = {
       state: 200,
       message: "good in 'match'",
       dataObject: {
-        leftPlayerNick: myIntraId,
-        rightPlayerNick: oppintraId,
+        leftUser,
+        rightUser,
+        // leftPlayerNick: myIntraId,
+        // rightPlayerNick: oppintraId,
         roomName: roomName,
+        gameType: gameType,
       },
     };
     this.server.to(roomName).emit('matchingcomplete', responseMessage);
