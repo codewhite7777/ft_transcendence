@@ -250,7 +250,7 @@ export default class EventsGateway
     // if connected, print socketid
     console.log(`Client connected!!! your socketid is: ${client.id}`);
 
-    const intraId = client.handshake.headers;
+    const intraId = client.handshake.headers.intraid;
     console.log(intraId);
     // key[socketid] : value[original socket]
     this.sessionMap[intraId] = client;
@@ -597,18 +597,19 @@ export default class EventsGateway
     // 1. Check if your opponent is online or offline
     const socketData = this.sessionMap[oppIntraId];
     if (socketData === undefined) {
-      this.server.to(client.id).emit('invite message fail');
-      return;
+      const responseMessage = {state: 404, message: "offline인 친구임. ㅅㄱ"};
+      return responseMessage;
     }
 
     // 2. Check if your opponent is playing or spectating
-    if (socketData.state === 'in-game') {
-      this.server.to(client.id).emit('invite message fail');
-      return;
-    }
+    // if (socketData.state === 'in-game') {
+    //   const responseMessage = {state: 404, message: "game중인 친구임. ㅅㄱ"};
+    //   return responseMessage;
+    // }
     // 3. return invite complete event
-    this.server.to(client.id).emit('invite message complete');
     this.server.to(socketData.id).emit('invite message', myIntraId);
+    const responseMessage = {state: 200, message: "초대 성공하였음."};
+    return responseMessage;
   }
 
   @SubscribeMessage('Accept invitation')
