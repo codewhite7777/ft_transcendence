@@ -607,7 +607,24 @@ export default class EventsGateway
     //   return responseMessage;
     // }
     // 3. return invite complete event
-    this.server.to(socketData.id).emit('invite message', myIntraId);
+    this.server.to(socketData.id).emit('invite message', myIntraId, gameType);
+    const responseMessage = {state: 200, message: "초대 성공하였음."};
+    return responseMessage;
+  }
+
+  @SubscribeMessage('Cancel Invite Game')
+  async CancelInviteGame(@ConnectedSocket() client, @MessageBody() data) {
+    const {myIntraId, oppIntraId, gameType }: { myIntraId: string, oppIntraId: string, gameType: number } = data;
+
+    // 1. Check if your opponent is online or offline
+    const socketData = this.sessionMap[oppIntraId];
+    if (socketData === undefined) {
+      const responseMessage = {state: 200, message: "offline인 친구임. ㅅㄱ"};
+      return responseMessage;
+    }
+
+    // 2. return invite complete event
+    this.server.to(socketData.id).emit('cancel invite message', myIntraId, gameType);
     const responseMessage = {state: 200, message: "초대 성공하였음."};
     return responseMessage;
   }
