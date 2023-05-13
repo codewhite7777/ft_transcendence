@@ -607,9 +607,10 @@ export default class EventsGateway
     //   return responseMessage;
     // }
     // 3. return invite complete event
-    const test = await this.userService.findUser(myIntraId);
-    console.log(test);
-    this.server.to(socketData.id).emit('invite message', {user:test, gameType});
+
+    const user = await this.userService.findUser(myIntraId);
+    console.log(user);
+    this.server.to(socketData.id).emit('invite message', {user:user, gameType});
     const responseMessage = {state: 200, message: "초대 성공하였음."};
     return responseMessage;
   }
