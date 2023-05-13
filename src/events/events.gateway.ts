@@ -250,8 +250,10 @@ export default class EventsGateway
     // if connected, print socketid
     console.log(`Client connected!!! your socketid is: ${client.id}`);
 
+    const intraId = client.handshake.headers;
+    console.log(intraId);
     // key[socketid] : value[original socket]
-    this.sessionMap[client.id] = client;
+    this.sessionMap[intraId] = client;
   }
 
   // 연결된 socket이 끊어질때 동작하는 함수 - OnGatewayDisconnect 짝궁
@@ -354,7 +356,8 @@ export default class EventsGateway
       console.log('undifined');
     }
 
-    delete this.sessionMap[client.id];
+    // const intraId = loseUser;
+    // delete this.sessionMap[intraId]; // TODO 연결이 끊어질때 나의 닉네임을 보낼 수  있음?
   }
 
   // press Up key
@@ -589,22 +592,23 @@ export default class EventsGateway
   private sessionMap = {};
   @SubscribeMessage('Invite Game')
   async InviteGame(@ConnectedSocket() client, @MessageBody() data) {
-    const { nickName }: { nickName: string } = data;
+    const {myIntraId, oppIntraId, gameType }: { myIntraId: string, oppIntraId: string, gameType: number } = data;
+
     // 1. Check if your opponent is online or offline
-    const socketData = this.sessionMap[nickName];
+    const socketData = this.sessionMap[oppIntraId];
     if (socketData === undefined) {
       this.server.to(client.id).emit('invite message fail');
       return;
     }
 
     // 2. Check if your opponent is playing or spectating
-    if (socketData.state === 'inGame') {
+    if (socketData.state === 'in-game') {
       this.server.to(client.id).emit('invite message fail');
       return;
     }
     // 3. return invite complete event
     this.server.to(client.id).emit('invite message complete');
-    this.server.to(socketData.id).emit('invite message', client.id);
+    this.server.to(socketData.id).emit('invite message', myIntraId);
   }
 
   @SubscribeMessage('Accept invitation')
