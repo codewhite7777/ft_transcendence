@@ -26,6 +26,13 @@ export class User {
 
   //added
   @Column('character varying', {
+    name: 'socketId',
+    nullable: true,
+    length: 100,
+  })
+  socketId: string | null;
+
+  @Column('character varying', {
     name: 'nickname',
     nullable: true,
     length: 100,

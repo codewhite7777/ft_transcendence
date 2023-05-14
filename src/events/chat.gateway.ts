@@ -110,15 +110,6 @@ export class ChatGateway
   // 이게 가능하다는 것은, 특정 user가 소켓을 연결했을때 특정방으로 바로 입장 시킬수도 있음을 의미한다.
   handleDisconnect(@ConnectedSocket() client: Socket) {
     console.log('handleDisconnect');
-    //console.log('client: ', client);
-    //console.log(`${client.id} disconnected`);
-    // const rooms = Object.keys(client.rooms);
-    // rooms.forEach((room) => {
-    //   this.server
-    //     .to(room)
-    //     .emit('userLeft', `User ${client.id} has left the room ${room}`);
-    //   client.leave(room);
-    // });
   }
 
   createEventResponse(
@@ -174,8 +165,6 @@ export class ChatGateway
     @MessageBody(CreateChannelValidationPipe) data,
   ) {
     const { kind, roomName, roomPassword } = data;
-    console.log('createChannel data: ', data);
-    console.log('client: ', client?.handshake);
     const socketUserId: number = parseInt(
       client?.handshake?.headers?.userid,
       10,
@@ -191,6 +180,7 @@ export class ChatGateway
       roomName,
       roomPassword,
     );
+    console.log('create Channel output: ', newChannel);
 
     // 방장을 참여.
     await this.chatService.joinChannel(newChannel, clientUser, true, true);
@@ -199,12 +189,11 @@ export class ChatGateway
     const welcomeData = {
       kind: newChannel.kind,
       name: roomName,
-      users: [{ clientUser, socketId: this.usMapper.get(socketUserId) }],
+      users: [{ ...clientUser, socketId: this.usMapper.get(socketUserId) }],
     };
     // client가 들어온 방의 제목을 전달합니다.
     client.emit('welcome', welcomeData);
     this.server.to(roomName).emit('user-join', { roomName, clientUser });
-    console.log('createChannel end');
     return this.createEventResponse(true, 'join success', [welcomeData]);
   }
 
@@ -256,11 +245,12 @@ export class ChatGateway
 
   //
   @SubscribeMessage('dm')
-  @UseInterceptors(RoomValidationInterceptor)
-  @UseInterceptors(UserValidationInterceptor)
+  //@UseInterceptors(UserValidationInterceptor)
   async handleDm(@ConnectedSocket() client, @MessageBody() data) {
-    const { roomName, message, channel, user } = data;
-    console.log(`[${roomName}] ${message}`);
+    const { user, message } = data;
+    //console.log(`[${roomName}] ${message}`);
+    console.log('dm event target:', user);
+    user.socketId = this.usMapper.get(user.id);
 
     // 검증
     const socketUserId: number = parseInt(
@@ -268,28 +258,30 @@ export class ChatGateway
       10,
     );
     const clientUser = await this.userService.findUserById(socketUserId);
+    clientUser.socketId = this.usMapper.get(clientUser.id);
     if (clientUser === null) {
       return this.createErrorEventResponse(`당신의 user정보가 없습니다.`);
     }
 
-    client
-      .to(this.usMapper.get(user.id))
-      .emit('chat', { roomName, user: clientUser, message });
+    client.to(user.socketId).emit('dm', {
+      roomName: `[DM]${clientUser.nickname}`,
+      user: clientUser,
+      message,
+    });
   }
 
   // socket을 특정 room에 join 시킵니다.
   // Todo: 필터필요.
   // Todo: 채널 밴 데이터가 있는 유저는 예외처리를 해야 합니다.
   @SubscribeMessage('joinChannel')
+  @UseInterceptors(RoomValidationInterceptor)
+  @UseInterceptors(ClientValidationInterceptor)
   async handleJoin(@ConnectedSocket() client, @MessageBody() data) {
-    const { roomName, roomPassword } = data;
-    const socketUserId: number = parseInt(
-      client?.handshake?.headers?.userid,
-      10,
-    );
-    const clientUser = await this.userService.findUserById(socketUserId);
-    if (clientUser === null)
-      return this.createErrorEventResponse('유저정보가없어용');
+    const { roomName, roomPassword, channel, clientUser } = data;
+
+    // Todo. usMapper 다른 모듈로 분리해서 인터셉터에서 아래 동작 처리할 수 있게 수정하기
+    clientUser.socketId = this.usMapper.get(clientUser.id);
+
     console.log(`joinChannel: ${roomName}`);
     if (client.rooms.has(roomName))
       return this.createErrorEventResponse(
@@ -298,14 +290,7 @@ export class ChatGateway
 
     // join on db level
     // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
-    const channel: Channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null)
-      return this.createErrorEventResponse(`Error: Channel doesn't exist`);
-    const user: User = await this.userService.findUserById(socketUserId);
-    if (user === null)
-      this.createErrorEventResponse(`Error: User doesn't exist`);
-
-    if (await this.chatService.isBanned(channel, user))
+    if (await this.chatService.isBanned(channel, clientUser))
       return this.createErrorEventResponse(
         `Error: 당신은 해당 채널에서 Ban 당했습니다.`,
       );
@@ -317,41 +302,112 @@ export class ChatGateway
         return this.createErrorEventResponse(`Error: Wrong password`);
     }
 
-    await this.chatService.joinChannel(channel, user, false, false);
-    // join on socket level
-    client.join(roomName);
+    const newChannel = await this.chatService.joinChannel(
+      channel,
+      clientUser,
+      false,
+      false,
+    );
+
+    // const welcomeData = {
+    //   id: channel.id,
+    //   kind: channel.kind,
+    //   name: roomName,
+    //   users: channel.channelinfos.map((channelinfo) => ({
+    //     id: channelinfo.user.id,
+    //     nickname: channelinfo.user.nickname,
+    //     intraId: channelinfo.user.intraid,
+    //     socketId: this.usMapper.get(channelinfo.userid),
+    //     avatar: channelinfo.user.avatar,
+    //     status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
+    //     isOwner: channelinfo.isowner,
+    //     isAdmin: channelinfo.isadmin,
+    //   })),
+    // };
+
+    console.log('channel.channelifos: ', channel.channelinfos);
 
     const welcomeData = {
       id: channel.id,
       kind: channel.kind,
       name: roomName,
-      users: channel.channelinfos.map((user) => ({
-        ...user,
-        socketId: this.usMapper.get(user.userid),
+      users: channel.channelinfos.map((channelinfo) => ({
+        ...channelinfo,
+        ...channelinfo.user,
+        socketId: this.usMapper.get(channelinfo.userid),
       })),
     };
+
     console.log('welcomeData: ', welcomeData);
-    this.server.to(roomName).emit('user-join', { roomName, socketUserId });
+    // join on socket level
+    client.join(roomName);
+    this.server.to(roomName).emit('user-join', { roomName, clientUser });
+    return this.createEventResponse(true, 'join success', [welcomeData]);
+  }
+
+  @SubscribeMessage('invitedChannel')
+  @UseInterceptors(RoomValidationInterceptor)
+  @UseInterceptors(ClientValidationInterceptor)
+  async handleInvited(@ConnectedSocket() client, @MessageBody() data) {
+    const { roomName, roomPassword, channel, clientUser } = data;
+
+    // Todo. usMapper 다른 모듈로 분리해서 인터셉터에서 아래 동작 처리할 수 있게 수정하기
+    clientUser.socketId = this.usMapper.get(clientUser.id);
+
+    console.log(`joinChannel: ${roomName}`);
+    if (client.rooms.has(roomName))
+      return this.createErrorEventResponse(
+        `Error: 이미 해당 방에 참여중입니다.`,
+      );
+
+    const newChannel = await this.chatService.joinChannel(
+      channel,
+      clientUser,
+      false,
+      false,
+    );
+
+    // const welcomeData = {
+    //   id: channel.id,
+    //   kind: channel.kind,
+    //   name: roomName,
+    //   users: channel.channelinfos.map((channelinfo) => ({
+    //     id: channelinfo.user.id,
+    //     nickname: channelinfo.user.nickname,
+    //     intraId: channelinfo.user.intraid,
+    //     socketId: this.usMapper.get(channelinfo.userid),
+    //     avatar: channelinfo.user.avatar,
+    //     status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
+    //     isOwner: channelinfo.isowner,
+    //     isAdmin: channelinfo.isadmin,
+    //   })),
+    // };
+
+    console.log('channel.channelifos: ', channel.channelinfos);
+
+    const welcomeData = {
+      id: channel.id,
+      kind: channel.kind,
+      name: roomName,
+      users: channel.channelinfos.map((channelinfo) => ({
+        ...channelinfo,
+        ...channelinfo.user,
+        socketId: this.usMapper.get(channelinfo.userid),
+      })),
+    };
+
+    console.log('welcomeData: ', welcomeData);
+    // join on socket level
+    client.join(roomName);
+    this.server.to(roomName).emit('user-join', { roomName, clientUser });
     return this.createEventResponse(true, 'join success', [welcomeData]);
   }
 
   @SubscribeMessage('leftChannel')
-  async handleLeft(
-    @ConnectedSocket() client,
-    @MessageBody() data,
-  ) {
-    const { roomName } = data;
-    if (!roomName)
-      return this.createErrorEventResponse(
-        `Error: 필요한 인자가 주어지지 않았습니다.`,
-      );
-    const socketUserId: number = parseInt(
-      client?.handshake?.headers?.userid,
-      10,
-    );
-    const clientUser = await this.userService.findUserById(socketUserId);
-    if (clientUser === null)
-      return this.createErrorEventResponse('유저정보가없어용');
+  @UseInterceptors(RoomValidationInterceptor)
+  @UseInterceptors(ClientValidationInterceptor)
+  async handleLeft(@ConnectedSocket() client, @MessageBody() data) {
+    const { roomName, channel, clientUser } = data;
     console.log('leftChannel event: ', roomName);
 
     if (!client.rooms.has(roomName))
@@ -359,12 +415,7 @@ export class ChatGateway
         `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`,
       );
 
-    const channel = await this.chatService.getChannelByName(roomName);
-    if (channel === null)
-      return this.createErrorEventResponse(
-        `Error: 알수없는 채널입니다. ${roomName}`,
-      );
-    if (channel.owner.id === socketUserId)
+    if (channel.owner.id === clientUser.id)
       return this.createErrorEventResponse(
         `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`,
       );
@@ -375,7 +426,7 @@ export class ChatGateway
         'chat',
         `Server🤖: User ${client.id} has left the room ${roomName}`,
       );
-    this.server.to(roomName).emit('user-join', { roomName, clientUser });
+    this.server.to(roomName).emit('user-left', { roomName, clientUser });
     client.leave(roomName);
     await this.chatService.leftChannel(channel, clientUser);
     return this.createEventResponse(
@@ -629,6 +680,7 @@ export class ChatGateway
     @MessageBody()
     { user, clientUser }: any,
   ) {
+    user.socketId = this.usMapper.get(user.id);
     console.log('directMessage: ', user, clientUser);
 
     this.server

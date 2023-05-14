@@ -23,6 +23,7 @@ export class ChatService {
   ) {}
 
   // create channel(종류, ownner, 제목, 비번)
+  // Todo. channelinfo추가애햐미.
   async createChannel(
     kind: number,
     owner: number,
@@ -85,12 +86,46 @@ export class ChatService {
   async getChannelById(id: number) {
     return this.channelRepository.findOneBy({ id });
   }
+
+  // ================================================
+  // legacy
+  // async getChannelByName(roomname: string) {
+  //   console.log(
+  //     'before: ',
+  //     await this.channelRepository.findOne({
+  //       where: { roomname },
+  //       relations: { channelinfos: true, owner: true },
+  //     }),
+  //   );
+  //   console.log(
+  //     'after: ',
+  //     await this.channelRepository.findOne({
+  //       where: { roomname },
+  //       relations: ['channelinfos', 'channelinfos.user', 'owner'],
+  //     }),
+  //   );
+  //   return await this.channelRepository.findOne({
+  //     where: { roomname },
+  //     relations: { channelinfos: true, owner: true },
+  //   });
+  // }
+
+  //new by chatgpt
   async getChannelByName(roomname: string) {
-    return this.channelRepository.findOne({
+    return await this.channelRepository.findOne({
       where: { roomname },
-      relations: { channelinfos: true, owner: true },
+      //relations: ['channelinfos', 'channelinfos.user', 'owner'],
+      relations: {
+        // 이렇게 조인하면 나중에 저장이 안됨. ERROR [WsExceptionsHandler] null value in column "chid" of relation "channelinfo" violates not-null constraint
+        channelinfos: {
+          user: true,
+        },
+        //channelinfos: true,
+        owner: true,
+      },
     });
   }
+  // ================================================
 
   //channels.ch. foreach...
   // channelinfos
@@ -145,23 +180,100 @@ export class ChatService {
     console.log(ret); // 결과값에 따라 삭제되었는지 안삭제되었는지 판단하여 반환할것.
   }
 
+  async y_joinChannel(
+    channel: Channel,
+    user: User,
+    isOwner: boolean,
+    isAdmin: boolean,
+  ) {
+    console.log('33joinChannel channel, user:', channel, user);
+
+    // Try to save channel, and catch any exceptions
+    let savedChannel;
+    try {
+      savedChannel = await this.channelRepository.save(channel);
+    } catch (error) {
+      console.error('Failed to save channel:', error);
+      throw error; // Or handle error appropriately
+    }
+
+    // Check if savedChannel.id is null
+    if (savedChannel.id === null) {
+      console.error('Failed to save channel: id is null');
+      throw new Error('Failed to save channel: id is null'); // Or handle error appropriately
+    }
+
+    const newChannelinfos = this.channelInfoRepository.create();
+    newChannelinfos.chid = savedChannel.id; // use id from savedChannel
+    newChannelinfos.userid = user.id;
+    newChannelinfos.user = user;
+    newChannelinfos.isowner = isOwner;
+    newChannelinfos.isadmin = isAdmin;
+
+    // Save newChannelinfos separately
+    const savedChannelinfos = await this.channelInfoRepository.save(
+      newChannelinfos,
+    );
+
+    savedChannel.channelinfos.push(savedChannelinfos);
+    console.log('joinChannel channel:', savedChannel);
+    console.log('newChannelinfos: ', savedChannelinfos);
+  }
+
   // join channel(누가, 어디채팅방에 참여한다)
+  // join channel (who joins the chat room where)
+  async x_joinChannel(
+    channel: Channel,
+    user: User,
+    isOwner: boolean,
+    isAdmin: boolean,
+  ) {
+    console.log('joinChannel channel, user:', channel, user);
+
+    // Save channel entity first
+    const savedChannel = await this.channelRepository.save(channel);
+
+    const newChannelinfos = this.channelInfoRepository.create();
+    newChannelinfos.chid = savedChannel.id; // use id from savedChannel
+    newChannelinfos.userid = user.id;
+    newChannelinfos.user = user;
+    newChannelinfos.isowner = isOwner;
+    newChannelinfos.isadmin = isAdmin;
+
+    // Save newChannelinfos separately
+    const savedChannelinfos = await this.channelInfoRepository.save(
+      newChannelinfos,
+    );
+
+    savedChannel.channelinfos.push(savedChannelinfos);
+    console.log('joinChannel channel:', savedChannel);
+    console.log('newChannelinfos: ', savedChannelinfos);
+
+    // No need to save channel again since we're not modifying channel directly
+    // If you need to save changes to channel, consider using transaction as suggested
+  }
+
   async joinChannel(
     channel: Channel,
     user: User,
     isOwner: boolean,
     isAdmin: boolean,
   ) {
+    console.log('joinChannel channel, user:', channel, user);
     const newChannelinfos = this.channelInfoRepository.create();
     newChannelinfos.chid = channel.id;
     newChannelinfos.userid = user.id;
+    newChannelinfos.user = user;
     newChannelinfos.isowner = isOwner;
     newChannelinfos.isadmin = isAdmin;
     // newChannelinfos를 save하지 않아도 괜찮은걸까? => save안하면 db에서 발견이 되지 않는다...
     await this.channelInfoRepository.save(newChannelinfos);
-    channel.channelinfos.push(newChannelinfos);
-    const updatedChannel = await this.channelRepository.save(channel);
-    //console.log('updatedChannel: ', updatedChannel);
+
+    // ??????????????????????
+    // channel.channelinfos.push(newChannelinfos);
+    // console.log('joinChannel channel:', channel);
+    // console.log('newChannelinfos: ', newChannelinfos);
+    // const updatedChannel = await this.channelRepository.save(channel);
   }
 
   // left channel(누가, 어디채팅방에서 나간다)
@@ -271,4 +383,24 @@ export class ChatService {
       relations: { userId: true },
     });
   }
+
+  // spreadChannel(channel: Channel) {
+  //   // made by gpt 🤖
+  //   // const channelswithSocketId = channels.map((channel) => ({
+  //     id: channel.ch.id,
+  //     name: channel.ch.roomname,
+  //     kind: channel.ch.kind,
+  //     users: channel.ch.channelinfos.map((channelinfo) => ({
+  //       id: channelinfo.user.id,
+  //       nickname: channelinfo.user.nickname,
+  //       intraId: channelinfo.user.intraid,
+  //       socketId: this.usMapper.get(channelinfo.userid),
+  //       avatar: channelinfo.user.avatar,
+  //       status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
+  //       isOwner: channelinfo.isowner,
+  //       isAdmin: channelinfo.isadmin,
+  //     })),
+  //     showUserList: false,
+  //   //}));
+  // }
 }
