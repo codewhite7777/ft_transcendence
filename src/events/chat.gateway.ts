@@ -71,7 +71,7 @@ export class ChatGateway
     // 유저가 db상으로 접속된 채널 목록을 가져온다.
     const channelinfos: Channelinfo[] =
       await this.chatService.getChannelInfoByUser(userId);
-    console.log('현재 유저가 db상으로 join한 채널 목록: ', channelinfos);
+    // console.log('현재 유저가 db상으로 join한 채널 목록: ', channelinfos);
     // 유저를 채널 목록들에 모두 join시킨다.
     channelinfos.forEach((channel) => {
       client.join(channel.ch.roomname);
@@ -197,9 +197,19 @@ export class ChatGateway
     client.join(roomName);
 
     const welcomeData = {
+      id: newChannel.id,
       kind: newChannel.kind,
       name: roomName,
-      users: [{ ...clientUser, socketId: this.usMapper.get(socketUserId) }],
+      users: [
+        {
+          ...clientUser,
+          // isOwner: channelinfo.isowner,
+          // isAdmin: channelinfo.isadmin,
+          socketId: this.usMapper.get(socketUserId),
+        },
+      ],
+      showUserList: true,
+      chatHistory: [],
     };
     // client가 들어온 방의 제목을 전달합니다.
     client.emit('welcome', welcomeData);
@@ -345,6 +355,8 @@ export class ChatGateway
         isAdmin: channelinfo.isadmin,
         socketId: this.usMapper.get(channelinfo.userid),
       })),
+      showUserList: false,
+      chatHistory: [],
     };
 
     console.log('welcomeData: ', welcomeData);
@@ -400,6 +412,8 @@ export class ChatGateway
         ...channelinfo.user,
         socketId: this.usMapper.get(channelinfo.userid),
       })),
+      showUserList: false,
+      chatHistory: [],
     };
 
     console.log('welcomeData: ', welcomeData);
