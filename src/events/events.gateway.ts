@@ -583,7 +583,7 @@ export default class EventsGateway
     }
 
     // travel extend queue
-    for (var i = 0; i < this.matchNormalQueue.length; i++) {
+    for (var i = 0; i < this.matchExtendQueue.length; i++) {
       if (this.matchExtendQueue[i].socket.id === client.id) {
         this.matchExtendQueue.splice(i, 1);
         isInQueueFlag = true;
