@@ -14,6 +14,7 @@ import { MatchhistoryModule } from './matchhistory/matchhistory.module';
 import { EventsModule } from './events/events.module';
 import * as fs from 'fs';
 import { UploadsModule } from './uploads/uploads.module';
+import { UserstatusModule } from './userstatus/userstatus.module';
 import UploadsService from './uploads/uploads.service';
 
 @Module({
@@ -30,6 +31,7 @@ import UploadsService from './uploads/uploads.service';
     UserblacklistModule,
     MatchhistoryModule,
     UploadsModule,
+    UserstatusModule,
   ],
   controllers: [AppController],
   providers: [AppService, UploadsService],
