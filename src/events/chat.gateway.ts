@@ -546,8 +546,6 @@ export class ChatGateway
 
     // Send a message to the user indicating they have been muted
     // Todo. 어떻게 뮤트된 유저에게 이벤트를 전달할지 고민!
-    console.log('muteEndTimestamp:', muteEndTimestamp);
-    console.log('korean muteEndTimestamp:', this.convertToKoreanTime(muteEndTimestamp));
     this.server.to(user.socketId).emit('user-muted', {
       roomName,
       muteEndTimestamp: this.convertToKoreanTime(muteEndTimestamp),
