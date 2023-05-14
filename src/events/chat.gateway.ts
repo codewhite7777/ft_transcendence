@@ -203,8 +203,6 @@ export class ChatGateway
       users: [
         {
           ...clientUser,
-          // isOwner: channelinfo.isowner,
-          // isAdmin: channelinfo.isadmin,
           socketId: this.usMapper.get(socketUserId),
         },
       ],
@@ -212,7 +210,6 @@ export class ChatGateway
       chatHistory: [],
     };
     // client가 들어온 방의 제목을 전달합니다.
-    client.emit('welcome', welcomeData);
     this.server.to(roomName).emit('user-join', { roomName, clientUser });
     return this.createEventResponse(true, 'join success', [welcomeData]);
   }
@@ -326,21 +323,6 @@ export class ChatGateway
     await this.chatService.joinChannel(channel, clientUser, false, false);
     const updatedChannel = await this.chatService.getChannelByName(roomName);
     console.log('updatedChannel:', updatedChannel);
-    // const welcomeData = {
-    //   id: channel.id,
-    //   kind: channel.kind,
-    //   name: roomName,
-    //   users: channel.channelinfos.map((channelinfo) => ({
-    //     id: channelinfo.user.id,
-    //     nickname: channelinfo.user.nickname,
-    //     intraId: channelinfo.user.intraid,
-    //     socketId: this.usMapper.get(channelinfo.userid),
-    //     avatar: channelinfo.user.avatar,
-    //     status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
-    //     isOwner: channelinfo.isowner,
-    //     isAdmin: channelinfo.isadmin,
-    //   })),
-    // };
 
     console.log('newChannel.channelifos: ', updatedChannel.channelinfos);
 
@@ -351,8 +333,6 @@ export class ChatGateway
       users: updatedChannel.channelinfos.map((channelinfo) => ({
         ...channelinfo,
         ...channelinfo.user,
-        isOwner: channelinfo.isowner,
-        isAdmin: channelinfo.isadmin,
         socketId: this.usMapper.get(channelinfo.userid),
       })),
       showUserList: false,
@@ -385,21 +365,6 @@ export class ChatGateway
     const updatedChannel = await this.chatService.getChannelByName(
       channel.name,
     );
-    // const welcomeData = {
-    //   id: channel.id,
-    //   kind: channel.kind,
-    //   name: roomName,
-    //   users: channel.channelinfos.map((channelinfo) => ({
-    //     id: channelinfo.user.id,
-    //     nickname: channelinfo.user.nickname,
-    //     intraId: channelinfo.user.intraid,
-    //     socketId: this.usMapper.get(channelinfo.userid),
-    //     avatar: channelinfo.user.avatar,
-    //     status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
-    //     isOwner: channelinfo.isowner,
-    //     isAdmin: channelinfo.isadmin,
-    //   })),
-    // };
 
     console.log('updatedChannel.channelifos: ', updatedChannel.channelinfos);
 
@@ -416,7 +381,6 @@ export class ChatGateway
       chatHistory: [],
     };
 
-    console.log('welcomeData: ', welcomeData);
     // join on socket level
     client.join(roomName);
     this.server.to(roomName).emit('user-join', { roomName, clientUser });
