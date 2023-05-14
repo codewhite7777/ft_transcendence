@@ -69,18 +69,16 @@ export class ChatGateway
     if (!userId) return;
     this.usMapper.set(userId, client.id);
     // 유저가 db상으로 접속된 채널 목록을 가져온다.
-    const channels: Channelinfo[] = await this.chatService.getChannelInfoByUser(
-      userId,
-    );
-    console.log('현재 유저가 db상으로 join한 채널 목록: ', channels);
-    //console.log('channels: ', channels);
+    const channelinfos: Channelinfo[] =
+      await this.chatService.getChannelInfoByUser(userId);
+    console.log('현재 유저가 db상으로 join한 채널 목록: ', channelinfos);
     // 유저를 채널 목록들에 모두 join시킨다.
-    channels.forEach((channel) => {
+    channelinfos.forEach((channel) => {
       client.join(channel.ch.roomname);
     });
 
     // made by gpt 🤖
-    const channelswithSocketId = channels.map((channel) => ({
+    const channelswithSocketId = channelinfos.map((channel) => ({
       id: channel.ch.id,
       name: channel.ch.roomname,
       kind: channel.ch.kind,
@@ -132,6 +130,14 @@ export class ChatGateway
     };
   }
 
+  convertToKoreanTime(utcTime: number): string {
+    const utcDateTime = new Date(utcTime);
+    const koreanDateTime = new Date(
+      utcDateTime.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }),
+    );
+    return koreanDateTime.toLocaleString('en-US', { timeZone: 'Asia/Seoul' });
+  }
+
   isMuted(client: Socket, roomName: string) {
     // Get the roomMutedUsers Map for the specified roomId
     const roomMutedUsers = this.mutedUsers.get(roomName);
@@ -142,12 +148,16 @@ export class ChatGateway
     if (muteEndTimestamp) {
       const currentTime = Date.now();
 
-      // Todo. 뮤트사용자에게 현재 채팅이 막혔다는 이벤트를 어떻게 발생시킬 것인가?
+      // Todo. 누가 뮤트시켰는지에 대한 정보를 넣자!
       if (currentTime < muteEndTimestamp) {
         console.log('muted user...!');
-        this.server
-          .to(roomName)
-          .emit('user-muted', { roomName, muteEndTimestamp });
+
+        this.server.to(client.id).emit('chat', {
+          roomName,
+          user: { nickname: '🤖 Server' },
+          message: '해당 메시지는 muted되어 전송되지 않았습니다.',
+        });
+
         return true;
       } else {
         this.mutedUsers.delete(client.id);
@@ -288,8 +298,6 @@ export class ChatGateway
         `Error: 이미 해당 방에 참여중입니다.`,
       );
 
-    // join on db level
-    // Todo: channel이 존재하지 않을경우 예외를 던져야 합니다.
     if (await this.chatService.isBanned(channel, clientUser))
       return this.createErrorEventResponse(
         `Error: 당신은 해당 채널에서 Ban 당했습니다.`,
@@ -297,18 +305,17 @@ export class ChatGateway
 
     if (channel.kind === 1) {
       if (roomPassword === undefined)
-        return this.createErrorEventResponse(`Error: parameter error`);
+        return this.createErrorEventResponse(`Error: no password error`);
       if (!(await bcrypt.compare(roomPassword, channel.roompassword)))
         return this.createErrorEventResponse(`Error: Wrong password`);
     }
 
-    const newChannel = await this.chatService.joinChannel(
-      channel,
-      clientUser,
-      false,
-      false,
-    );
+    // const tempChanne
 
+    // 이 안에서 channel은 dreprecated 되는 것 같다.
+    await this.chatService.joinChannel(channel, clientUser, false, false);
+    const updatedChannel = await this.chatService.getChannelByName(roomName);
+    console.log('updatedChannel:', updatedChannel);
     // const welcomeData = {
     //   id: channel.id,
     //   kind: channel.kind,
@@ -325,15 +332,17 @@ export class ChatGateway
     //   })),
     // };
 
-    console.log('channel.channelifos: ', channel.channelinfos);
+    console.log('newChannel.channelifos: ', updatedChannel.channelinfos);
 
     const welcomeData = {
-      id: channel.id,
-      kind: channel.kind,
+      id: updatedChannel.id,
+      kind: updatedChannel.kind,
       name: roomName,
-      users: channel.channelinfos.map((channelinfo) => ({
+      users: updatedChannel.channelinfos.map((channelinfo) => ({
         ...channelinfo,
         ...channelinfo.user,
+        isOwner: channelinfo.isowner,
+        isAdmin: channelinfo.isadmin,
         socketId: this.usMapper.get(channelinfo.userid),
       })),
     };
@@ -360,13 +369,10 @@ export class ChatGateway
         `Error: 이미 해당 방에 참여중입니다.`,
       );
 
-    const newChannel = await this.chatService.joinChannel(
-      channel,
-      clientUser,
-      false,
-      false,
+    await this.chatService.joinChannel(channel, clientUser, false, false);
+    const updatedChannel = await this.chatService.getChannelByName(
+      channel.name,
     );
-
     // const welcomeData = {
     //   id: channel.id,
     //   kind: channel.kind,
@@ -383,13 +389,13 @@ export class ChatGateway
     //   })),
     // };
 
-    console.log('channel.channelifos: ', channel.channelinfos);
+    console.log('updatedChannel.channelifos: ', updatedChannel.channelinfos);
 
     const welcomeData = {
-      id: channel.id,
-      kind: channel.kind,
+      id: updatedChannel.id,
+      kind: updatedChannel.kind,
       name: roomName,
-      users: channel.channelinfos.map((channelinfo) => ({
+      users: updatedChannel.channelinfos.map((channelinfo) => ({
         ...channelinfo,
         ...channelinfo.user,
         socketId: this.usMapper.get(channelinfo.userid),
@@ -420,12 +426,11 @@ export class ChatGateway
         `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`,
       );
 
-    this.server
-      .to(roomName)
-      .emit(
-        'chat',
-        `Server🤖: User ${client.id} has left the room ${roomName}`,
-      );
+    // this.server.to(roomName).emit('chat', {
+    //   roomName,
+    //   user: clientUser,
+    //   message: `Server🤖: User ${client.id} has left the room ${roomName}`,
+    // });
     this.server.to(roomName).emit('user-left', { roomName, clientUser });
     client.leave(roomName);
     await this.chatService.leftChannel(channel, clientUser);
@@ -515,7 +520,6 @@ export class ChatGateway
     return response;
   }
 
-  // Todo. payload를 저렇게 깔끔하게 표시할 수 있구나.. 다른 함수들에도 적용하자.
   @SubscribeMessage('mute')
   @UseInterceptors(ChannelValidationInterceptor)
   async mute(
@@ -523,6 +527,7 @@ export class ChatGateway
     @MessageBody()
     { roomName, user, clientUser, channel }: any,
   ) {
+    user.socketId = this.usMapper.get(user.id);
     console.log(`roomName: ${roomName}, userId: ${user.id}`);
     const duration = 10;
 
@@ -537,11 +542,16 @@ export class ChatGateway
     }
 
     // Add or update the user to the roomMutedUsers Map
-    roomMutedUsers.set(this.usMapper.get(user.id), muteEndTimestamp);
+    roomMutedUsers.set(user.socketId, muteEndTimestamp);
 
     // Send a message to the user indicating they have been muted
     // Todo. 어떻게 뮤트된 유저에게 이벤트를 전달할지 고민!
-    this.server.to(roomName).emit('user-muted', { roomName, muteEndTimestamp });
+    console.log('muteEndTimestamp:', muteEndTimestamp);
+    console.log('korean muteEndTimestamp:', this.convertToKoreanTime(muteEndTimestamp));
+    this.server.to(user.socketId).emit('user-muted', {
+      roomName,
+      muteEndTimestamp: this.convertToKoreanTime(muteEndTimestamp),
+    });
 
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
@@ -663,6 +673,10 @@ export class ChatGateway
     { roomName, user, clientUser, channel }: any,
   ) {
     console.log('channel-invite: ', roomName, user, clientUser, channel);
+
+    // Todo. 초대받은 유저가 이미 해당 방에 참여한 경우 에러를 발생시킨다.
+
+    // Todo. DM방의 경우, 초대를 할 수 없다.
 
     this.server
       .to(this.usMapper.get(user.id))

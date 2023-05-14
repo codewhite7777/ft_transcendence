@@ -158,6 +158,7 @@ export class ChatService {
     channel.roompassword = roomPassword;
     return this.channelRepository.save(channel);
   }
+
   // 비밀번호 암호화 로직을 넣어야 함...!
   async updatePassword(channel: Channel, password: string) {
     channel.roompassword = await this.encryptPassword(password);
@@ -258,8 +259,8 @@ export class ChatService {
     user: User,
     isOwner: boolean,
     isAdmin: boolean,
-  ) {
-    console.log('joinChannel channel, user:', channel, user);
+  ): Promise<void> {
+    //console.log('joinChannel channel, user:', channel, user);
     const newChannelinfos = this.channelInfoRepository.create();
     newChannelinfos.chid = channel.id;
     newChannelinfos.userid = user.id;
@@ -267,13 +268,8 @@ export class ChatService {
     newChannelinfos.isowner = isOwner;
     newChannelinfos.isadmin = isAdmin;
     // newChannelinfos를 save하지 않아도 괜찮은걸까? => save안하면 db에서 발견이 되지 않는다...
+    //console.log('newChannelinfos: ', newChannelinfos);
     await this.channelInfoRepository.save(newChannelinfos);
-
-    // ??????????????????????
-    // channel.channelinfos.push(newChannelinfos);
-    // console.log('joinChannel channel:', channel);
-    // console.log('newChannelinfos: ', newChannelinfos);
-    // const updatedChannel = await this.channelRepository.save(channel);
   }
 
   // left channel(누가, 어디채팅방에서 나간다)
@@ -289,6 +285,8 @@ export class ChatService {
   }
   // delegate(채널에서 owner를 A에서 B로 위임한다.)
   async delegate(channel: Channel, user: User) {
+    channel.owner = user;
+    await this.channelRepository.save(channel);
     const channelInfo = await this.channelInfoRepository.findOne({
       where: { chid: channel.id, userid: user.id },
     });
@@ -302,12 +300,42 @@ export class ChatService {
     const ret = await this.channelInfoRepository.save(channelInfo);
     const ret2 = await this.channelInfoRepository.save(channelInfo2);
     console.log('channelInfo update ret: ', ret, ret2);
-
-    channel.owner = user;
-    return this.channelRepository.save(channel);
   }
+
+  async delegate2(channel: Channel, user: User) {
+    const existingChannelInfo = await this.channelInfoRepository.findOne({
+      where: { chid: channel.id, userid: user.id },
+    });
+    if (existingChannelInfo && existingChannelInfo.isowner) {
+      throw new Error('User is already an owner');
+    }
+
+    // Delegate the channel to the user
+    channel.owner = user;
+    await this.channelRepository.save(channel);
+
+    // Update the ChannelInfo for the new owner
+    const newOwnerChannelInfo =
+      existingChannelInfo ||
+      this.channelInfoRepository.create({ chid: channel.id, userid: user.id });
+    newOwnerChannelInfo.isowner = true;
+    newOwnerChannelInfo.isadmin = true;
+    await this.channelInfoRepository.save(newOwnerChannelInfo);
+
+    // Update the ChannelInfo for the old owner
+    const oldOwnerChannelInfo = await this.channelInfoRepository.findOne({
+      where: { chid: channel.id, userid: channel.owner.id },
+    });
+
+    if (oldOwnerChannelInfo) {
+      oldOwnerChannelInfo.isowner = false;
+      oldOwnerChannelInfo.isadmin = false;
+      await this.channelInfoRepository.save(oldOwnerChannelInfo);
+    }
+  }
+
   // permisson(채널에서 A를 admin으로 임명한다.)
-  async permission(ch: Channel, user: User) {
+  async permission(ch: Channel, user: User): Promise<Channelinfo> {
     const channelInfo = await this.channelInfoRepository.findOne({
       where: { chid: ch.id, userid: user.id },
     });
@@ -365,9 +393,6 @@ export class ChatService {
     channelBlackList.channelId = ch.id;
     channelBlackList.userId = user.id;
     const ret = this.channelBlacklistRepository.save(channelBlackList);
-    // ret으로 잘 생성되었는지 확인한다.
-
-    // socket상으로 막는다.
   }
 
   async encryptPassword(password: string) {
@@ -383,24 +408,4 @@ export class ChatService {
       relations: { userId: true },
     });
   }
-
-  // spreadChannel(channel: Channel) {
-  //   // made by gpt 🤖
-  //   // const channelswithSocketId = channels.map((channel) => ({
-  //     id: channel.ch.id,
-  //     name: channel.ch.roomname,
-  //     kind: channel.ch.kind,
-  //     users: channel.ch.channelinfos.map((channelinfo) => ({
-  //       id: channelinfo.user.id,
-  //       nickname: channelinfo.user.nickname,
-  //       intraId: channelinfo.user.intraid,
-  //       socketId: this.usMapper.get(channelinfo.userid),
-  //       avatar: channelinfo.user.avatar,
-  //       status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
-  //       isOwner: channelinfo.isowner,
-  //       isAdmin: channelinfo.isadmin,
-  //     })),
-  //     showUserList: false,
-  //   //}));
-  // }
 }
