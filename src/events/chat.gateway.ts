@@ -108,6 +108,11 @@ export class ChatGateway
   // 이게 가능하다는 것은, 특정 user가 소켓을 연결했을때 특정방으로 바로 입장 시킬수도 있음을 의미한다.
   handleDisconnect(@ConnectedSocket() client: Socket) {
     console.log('handleDisconnect');
+    const userId: number = parseInt(
+      client?.handshake?.headers?.userid as string,
+      10,
+    );
+    this.usMapper.delete(userId);
   }
 
   createEventResponse(
@@ -567,8 +572,12 @@ export class ChatGateway
     this.server
       .to(roomName)
       .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
+
     // socket상에서 room에서 퇴장시킨다.
-    client.leave(roomName);
+    const userToKickSocketId = this.usMapper.get(user.id);
+    const userMap: any = this.server.sockets;
+    const userToKickSocket = userMap.get(userToKickSocketId);
+    userToKickSocket.leave(roomName);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Ban하였습니다.`;
@@ -596,8 +605,12 @@ export class ChatGateway
     this.server
       .to(roomName)
       .emit('chat', `Server🤖: 유저 ${user.nickname}가 Kick 당했습니다!`);
+
     // socket상에서 room에서 퇴장시킨다.
-    client.leave(roomName);
+    const userToKickSocketId = this.usMapper.get(user.id);
+    const userMap: any = this.server.sockets;
+    const userToKickSocket = userMap.get(userToKickSocketId);
+    userToKickSocket.leave(roomName);
 
     const response = { event: 'foo', data: 'bar' };
     return `Success: 성공적으로 Kick하였습니다.`;
