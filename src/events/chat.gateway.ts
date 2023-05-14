@@ -89,8 +89,8 @@ export class ChatGateway
         socketId: this.usMapper.get(channelinfo.userid),
         avatar: channelinfo.user.avatar,
         status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
-        isOwner: channelinfo.isowner,
-        isAdmin: channelinfo.isadmin,
+        isowner: channelinfo.isowner,
+        isadmin: channelinfo.isadmin,
       })),
       showUserList: false,
     }));
@@ -204,6 +204,8 @@ export class ChatGateway
         {
           ...clientUser,
           socketId: this.usMapper.get(socketUserId),
+          isowner: true,
+          isadmin: true,
         },
       ],
       showUserList: true,
@@ -330,6 +332,7 @@ export class ChatGateway
       id: updatedChannel.id,
       kind: updatedChannel.kind,
       name: roomName,
+      owner: updatedChannel.owner,
       users: updatedChannel.channelinfos.map((channelinfo) => ({
         ...channelinfo,
         ...channelinfo.user,
@@ -368,11 +371,15 @@ export class ChatGateway
 
     console.log('updatedChannel.channelifos: ', updatedChannel.channelinfos);
 
+    const welcomeChannel = await this.chatService.getChannelByName(
+      channel.name,
+    );
+
     const welcomeData = {
-      id: updatedChannel.id,
-      kind: updatedChannel.kind,
+      id: welcomeChannel.id,
+      kind: welcomeChannel.kind,
       name: roomName,
-      users: updatedChannel.channelinfos.map((channelinfo) => ({
+      users: welcomeChannel.channelinfos.map((channelinfo) => ({
         ...channelinfo,
         ...channelinfo.user,
         socketId: this.usMapper.get(channelinfo.userid),
@@ -425,7 +432,7 @@ export class ChatGateway
   async handleDelegate(
     @ConnectedSocket() client,
     @MessageBody()
-    { roomName, user, clientUser, channel }: any,
+    { roomName, user, channel }: any,
   ) {
     // 핵심 위임로직.
     await this.chatService.delegate(channel, user);

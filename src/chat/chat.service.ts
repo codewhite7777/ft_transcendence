@@ -87,30 +87,6 @@ export class ChatService {
     return this.channelRepository.findOneBy({ id });
   }
 
-  // ================================================
-  // legacy
-  // async getChannelByName(roomname: string) {
-  //   console.log(
-  //     'before: ',
-  //     await this.channelRepository.findOne({
-  //       where: { roomname },
-  //       relations: { channelinfos: true, owner: true },
-  //     }),
-  //   );
-  //   console.log(
-  //     'after: ',
-  //     await this.channelRepository.findOne({
-  //       where: { roomname },
-  //       relations: ['channelinfos', 'channelinfos.user', 'owner'],
-  //     }),
-  //   );
-  //   return await this.channelRepository.findOne({
-  //     where: { roomname },
-  //     relations: { channelinfos: true, owner: true },
-  //   });
-  // }
-
-  //new by chatgpt
   async getChannelByName(roomname: string) {
     return await this.channelRepository.findOne({
       where: { roomname },
@@ -125,13 +101,24 @@ export class ChatService {
       },
     });
   }
-  // ================================================
 
-  //channels.ch. foreach...
   // channelinfos
   async getChannelInfoByUser(userId: number) {
     return this.channelInfoRepository.find({
       where: { userid: userId },
+      relations: {
+        ch: {
+          channelinfos: {
+            user: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getChannelInfo(chid: number, userid: number) {
+    return this.channelInfoRepository.find({
+      where: { chid, userid },
       relations: {
         ch: {
           channelinfos: {
@@ -159,14 +146,15 @@ export class ChatService {
     return this.channelRepository.save(channel);
   }
 
-  // 비밀번호 암호화 로직을 넣어야 함...!
   async updatePassword(channel: Channel, password: string) {
-    channel.roompassword = await this.encryptPassword(password);
-    return this.channelRepository.save(channel);
+    await this.channelRepository.update(channel.id, {
+      roompassword: await this.encryptPassword(password),
+    });
   }
   async updateKind(channel: Channel, kind: number) {
-    channel.kind = kind;
-    return this.channelRepository.save(channel);
+    await this.channelRepository.update(channel.id, {
+      kind,
+    });
   }
 
   // delete channel
@@ -181,94 +169,20 @@ export class ChatService {
     console.log(ret); // 결과값에 따라 삭제되었는지 안삭제되었는지 판단하여 반환할것.
   }
 
-  async y_joinChannel(
-    channel: Channel,
-    user: User,
-    isOwner: boolean,
-    isAdmin: boolean,
-  ) {
-    console.log('33joinChannel channel, user:', channel, user);
-
-    // Try to save channel, and catch any exceptions
-    let savedChannel;
-    try {
-      savedChannel = await this.channelRepository.save(channel);
-    } catch (error) {
-      console.error('Failed to save channel:', error);
-      throw error; // Or handle error appropriately
-    }
-
-    // Check if savedChannel.id is null
-    if (savedChannel.id === null) {
-      console.error('Failed to save channel: id is null');
-      throw new Error('Failed to save channel: id is null'); // Or handle error appropriately
-    }
-
-    const newChannelinfos = this.channelInfoRepository.create();
-    newChannelinfos.chid = savedChannel.id; // use id from savedChannel
-    newChannelinfos.userid = user.id;
-    newChannelinfos.user = user;
-    newChannelinfos.isowner = isOwner;
-    newChannelinfos.isadmin = isAdmin;
-
-    // Save newChannelinfos separately
-    const savedChannelinfos = await this.channelInfoRepository.save(
-      newChannelinfos,
-    );
-
-    savedChannel.channelinfos.push(savedChannelinfos);
-    console.log('joinChannel channel:', savedChannel);
-    console.log('newChannelinfos: ', savedChannelinfos);
-  }
-
   // join channel(누가, 어디채팅방에 참여한다)
   // join channel (who joins the chat room where)
-  async x_joinChannel(
-    channel: Channel,
-    user: User,
-    isOwner: boolean,
-    isAdmin: boolean,
-  ) {
-    console.log('joinChannel channel, user:', channel, user);
-
-    // Save channel entity first
-    const savedChannel = await this.channelRepository.save(channel);
-
-    const newChannelinfos = this.channelInfoRepository.create();
-    newChannelinfos.chid = savedChannel.id; // use id from savedChannel
-    newChannelinfos.userid = user.id;
-    newChannelinfos.user = user;
-    newChannelinfos.isowner = isOwner;
-    newChannelinfos.isadmin = isAdmin;
-
-    // Save newChannelinfos separately
-    const savedChannelinfos = await this.channelInfoRepository.save(
-      newChannelinfos,
-    );
-
-    savedChannel.channelinfos.push(savedChannelinfos);
-    console.log('joinChannel channel:', savedChannel);
-    console.log('newChannelinfos: ', savedChannelinfos);
-
-    // No need to save channel again since we're not modifying channel directly
-    // If you need to save changes to channel, consider using transaction as suggested
-  }
-
   async joinChannel(
     channel: Channel,
     user: User,
-    isOwner: boolean,
-    isAdmin: boolean,
+    isowner: boolean,
+    isadmin: boolean,
   ): Promise<void> {
-    //console.log('joinChannel channel, user:', channel, user);
     const newChannelinfos = this.channelInfoRepository.create();
     newChannelinfos.chid = channel.id;
     newChannelinfos.userid = user.id;
     newChannelinfos.user = user;
-    newChannelinfos.isowner = isOwner;
-    newChannelinfos.isadmin = isAdmin;
-    // newChannelinfos를 save하지 않아도 괜찮은걸까? => save안하면 db에서 발견이 되지 않는다...
-    //console.log('newChannelinfos: ', newChannelinfos);
+    newChannelinfos.isowner = isowner;
+    newChannelinfos.isadmin = isadmin;
     await this.channelInfoRepository.save(newChannelinfos);
   }
 
@@ -284,25 +198,25 @@ export class ChatService {
     });
   }
   // delegate(채널에서 owner를 A에서 B로 위임한다.)
+  // async delegate(channel: Channel, user: User) {
+  //   channel.owner = user;
+  //   await this.channelRepository.save(channel);
+  //   const channelInfo = await this.channelInfoRepository.findOne({
+  //     where: { chid: channel.id, userid: user.id },
+  //   });
+  //   const channelInfo2 = await this.channelInfoRepository.findOne({
+  //     where: { chid: channel.id, userid: channel.owner.id },
+  //   });
+
+  //   if (channelInfo.isowner) throw Error('이미 방장임');
+  //   await this.changeRole(channelInfo, true, true);
+  //   await this.changeRole(channelInfo2, false, false);
+  //   const ret = await this.channelInfoRepository.save(channelInfo);
+  //   const ret2 = await this.channelInfoRepository.save(channelInfo2);
+  //   console.log('channelInfo update ret: ', ret, ret2);
+  // }
+
   async delegate(channel: Channel, user: User) {
-    channel.owner = user;
-    await this.channelRepository.save(channel);
-    const channelInfo = await this.channelInfoRepository.findOne({
-      where: { chid: channel.id, userid: user.id },
-    });
-    const channelInfo2 = await this.channelInfoRepository.findOne({
-      where: { chid: channel.id, userid: channel.owner.id },
-    });
-
-    if (channelInfo.isowner) throw Error('이미 방장임');
-    await this.changeRole(channelInfo, true, true);
-    await this.changeRole(channelInfo2, false, false);
-    const ret = await this.channelInfoRepository.save(channelInfo);
-    const ret2 = await this.channelInfoRepository.save(channelInfo2);
-    console.log('channelInfo update ret: ', ret, ret2);
-  }
-
-  async delegate2(channel: Channel, user: User) {
     const existingChannelInfo = await this.channelInfoRepository.findOne({
       where: { chid: channel.id, userid: user.id },
     });
@@ -311,27 +225,18 @@ export class ChatService {
     }
 
     // Delegate the channel to the user
-    channel.owner = user;
-    await this.channelRepository.save(channel);
+    await this.channelRepository.update(channel.id, { owner: user });
 
-    // Update the ChannelInfo for the new owner
-    const newOwnerChannelInfo =
-      existingChannelInfo ||
-      this.channelInfoRepository.create({ chid: channel.id, userid: user.id });
-    newOwnerChannelInfo.isowner = true;
-    newOwnerChannelInfo.isadmin = true;
-    await this.channelInfoRepository.save(newOwnerChannelInfo);
-
-    // Update the ChannelInfo for the old owner
-    const oldOwnerChannelInfo = await this.channelInfoRepository.findOne({
-      where: { chid: channel.id, userid: channel.owner.id },
-    });
-
-    if (oldOwnerChannelInfo) {
-      oldOwnerChannelInfo.isowner = false;
-      oldOwnerChannelInfo.isadmin = false;
-      await this.channelInfoRepository.save(oldOwnerChannelInfo);
-    }
+    // 기존방장의 권한 제거
+    await this.channelInfoRepository.update(
+      { chid: channel.id, userid: channel.owner.id },
+      { isowner: false, isadmin: false },
+    );
+    // 새 방장의 권한 부여
+    await this.channelInfoRepository.update(
+      { chid: channel.id, userid: user.id },
+      { isowner: true, isadmin: true },
+    );
   }
 
   // permisson(채널에서 A를 admin으로 임명한다.)
@@ -356,11 +261,11 @@ export class ChatService {
 
   async changeRole(
     channelInfo: Channelinfo,
-    isOwner: boolean,
-    isAdmin: boolean,
+    isowner: boolean,
+    isadmin: boolean,
   ) {
-    channelInfo.isowner = isOwner;
-    channelInfo.isadmin = isAdmin;
+    channelInfo.isowner = isowner;
+    channelInfo.isadmin = isadmin;
     return await this.channelInfoRepository.save(channelInfo);
   }
 
