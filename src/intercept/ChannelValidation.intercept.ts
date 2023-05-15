@@ -97,7 +97,7 @@ export class RoomValidationInterceptor implements NestInterceptor {
     const data = context.switchToWs().getData();
     const { roomName } = data;
 
-    if (roomName === undefined || roomName.size < 1)
+    if (roomName === undefined || roomName.length < 1)
       throw new BadRequestException('Parameter error: require roomName');
 
     const channel = await this.chatService.getChannelByName(roomName);

@@ -71,7 +71,18 @@ export class ChatGateway
     const userId: number = parseInt(client?.handshake?.headers?.userid, 10);
     if (!userId) return;
     this.usMapper.set(userId, client.id);
+
+    // User를 Friend로 추가한 유저들의 리스트를 가져온다
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
     this.UserStatusService.setUserStatus(userId, 'online');
+    const userList = await this.chatService.getFriend(userId);
+    const updateData = { userId, status: 'online' };
+    userList.forEach((user) =>
+      this.server
+        .to(this.usMapper.get(user.userId.id))
+        .emit('user-state', updateData),
+    );
+
     // 유저가 db상으로 접속된 채널 목록을 가져온다.
     const channelinfos: Channelinfo[] =
       await this.chatService.getChannelInfoByUser(userId);
@@ -110,14 +121,24 @@ export class ChatGateway
   // 파라미터로 클라이언트를 가져올 수 있다.
   // Todo 이후, 참여한 모든 방을 나가도록 처리하면 될듯하다.
   // 이게 가능하다는 것은, 특정 user가 소켓을 연결했을때 특정방으로 바로 입장 시킬수도 있음을 의미한다.
-  handleDisconnect(@ConnectedSocket() client: Socket) {
+  async handleDisconnect(@ConnectedSocket() client: Socket) {
     console.log('handleDisconnect');
     const userId: number = parseInt(
       client?.handshake?.headers?.userid as string,
       10,
     );
     this.usMapper.delete(userId);
+
+    // User를 Friend로 추가한 유저들의 리스트를 가져온다
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
     this.UserStatusService.setUserStatus(userId, 'offline');
+    const userList = await this.chatService.getFriend(userId);
+    const updateData = { userId, statue: 'offline' };
+    userList.forEach((user) =>
+      this.server
+        .to(this.usMapper.get(user.userId.id))
+        .emit('user-state', updateData),
+    );
   }
 
   createEventResponse(
@@ -375,15 +396,8 @@ export class ChatGateway
       );
 
     await this.chatService.joinChannel(channel, clientUser, false, false);
-    const updatedChannel = await this.chatService.getChannelByName(
-      channel.name,
-    );
-
-    console.log('updatedChannel.channelifos: ', updatedChannel.channelinfos);
-
-    const welcomeChannel = await this.chatService.getChannelByName(
-      channel.name,
-    );
+    const welcomeChannel = await this.chatService.getChannelByName(roomName);
+    console.log('welcomdChannel: ', welcomeChannel);
 
     const welcomeData = {
       id: welcomeChannel.id,
@@ -416,10 +430,20 @@ export class ChatGateway
         `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`,
       );
 
-    if (channel.owner.id === clientUser.id)
-      return this.createErrorEventResponse(
-        `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`,
+    if (channel.owner.id === clientUser.id) {
+      // channel, channelinfo를 모두 삭제합니다.
+      this.chatService.deleteChannelById(channel.id);
+
+      this.server
+        .to(roomName)
+        .emit('channel-deleted', { roomName, owner: clientUser });
+
+      return this.createEventResponse(
+        true,
+        `Success: 해당 채널을 삭제하였습니다.`,
+        [],
       );
+    }
 
     // this.server.to(roomName).emit('chat', {
     //   roomName,
@@ -651,10 +675,9 @@ export class ChatGateway
 
     if (!status) return this.createErrorEventResponse(`status 값 에러`);
 
-    this.UserStatusService.setUserStatus(user.id, status);
-
     // User를 Friend로 추가한 유저들의 리스트를 가져온다
     // 유저리스트의 각 유저들의 socketid를 넣어준다.
+    this.UserStatusService.setUserStatus(user.id, status);
     const userList = await this.chatService.getFriend(user.id);
     const updateData = { userId, status };
     userList.forEach((user) =>
