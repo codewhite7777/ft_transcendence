@@ -270,6 +270,34 @@ export default class EventsGateway
 
   // 연결된 socket이 끊어질때 동작하는 함수 - OnGatewayDisconnect 짝궁
   async handleDisconnect(client: any, ...args: any[]) {
+    const socketUserId: number = parseInt(
+      client?.handshake?.headers?.userid,
+      10,
+    );
+
+    // queue 지우자.
+    for (var i = 0; i < this.matchNormalQueue.length; i++) {
+      console.log(this.matchNormalQueue[i].socket.id, client.id);
+      if (this.matchNormalQueue[i].socket.id === client.id) {
+        this.matchNormalQueue.splice(i, 1);
+        break;
+      }
+    }
+
+    // travel extend queue
+    for (var i = 0; i < this.matchExtendQueue.length; i++) {
+      if (this.matchExtendQueue[i].socket.id === client.id) {
+        this.matchExtendQueue.splice(i, 1);
+        break;
+      }
+    }
+
+    const clientUser = await this.userService.findUserById(socketUserId);
+    console.log(clientUser);
+
+    // change client status
+    this.userstatusService.setUserStatus(clientUser.id, 'offline');
+
     // Get roomName and PlayerId that the client belongs to.
     if (this.socketRoomMap.get(client.id) !== undefined) {
       const roomName = this.socketRoomMap.get(client.id).roomName;
@@ -372,6 +400,7 @@ export default class EventsGateway
       console.log('undifined');
     }
 
+    this.userService.deleteSession(clientUser.intraid);
     // const intraId = loseUser;
     // delete this.sessionMap[intraId]; // TODO 연결이 끊어질때 나의 닉네임을 보낼 수  있음?
   }
@@ -633,7 +662,7 @@ export default class EventsGateway
     // 2. Check if your opponent is playing or spectating
     const oppUser = await this.userService.findUser(oppIntraId);
     this.userstatusService.setUserStatus(oppUser.id, 'online');
-    if (this.userstatusService.getUserStatus(oppUser.id) === 'online') {
+    if (this.userstatusService.getUserStatus(oppUser.id) !== 'in-game') {
       const responseMessage = {state: 404, message: "game중인 친구임. ㅅㄱ"};
       return responseMessage;
     }
@@ -783,16 +812,18 @@ export default class EventsGateway
 				
 			console.log('2 ', roomName);
       // remove socket room
-      delete this.gameRoom[roomName];
-      this.server.socketsLeave(roomName);
+      
+      
       const responseMessage = {
         state: 200,
         message: 'Test',
         dataObject: { player: winner.intraId },
       };
+      console.log("response Message", responseMessage);
       this.server.to(roomName).emit('gameover', responseMessage);
-
-			console.log('3 ', responseMessage);
+      delete this.gameRoom[roomName];
+      this.server.socketsLeave(roomName);
+      return responseMessage;
     }
   }
 }

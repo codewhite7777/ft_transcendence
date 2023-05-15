@@ -11,7 +11,7 @@ import EventsGateway from './events.gateway';
 
 @Module({
   imports: [ChatModule, DatabaseModule, UserModule],
-  providers: [EventsGateway, ...userProviders, ...matchhistoryProviders, UserService, MatchhistoryService, UserstatusService],
-  exports: [UserService, ...userProviders, MatchhistoryService, ...matchhistoryProviders],
+  providers: [EventsGateway, ...matchhistoryProviders, MatchhistoryService, UserstatusService],
+  exports: [MatchhistoryService, ...matchhistoryProviders],
 })
 export class EventsModule {}

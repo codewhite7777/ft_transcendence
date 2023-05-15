@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import { UploadsModule } from './uploads/uploads.module';
 import { UserstatusModule } from './userstatus/userstatus.module';
 import UploadsService from './uploads/uploads.service';
+import { UserService } from './user/user.service';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import UploadsService from './uploads/uploads.service';
     UserstatusModule,
   ],
   controllers: [AppController],
-  providers: [AppService, UploadsService],
+  providers: [AppService, UploadsService, UserService],
 })
 export class AppModule {
   constructor() {
