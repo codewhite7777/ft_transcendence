@@ -29,7 +29,7 @@ export class FriendlistController {
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const intraID = await this.userService.getIntraID(cookie);
     const userData = await this.userService.findUser(intraID);
-    const result = await this.friendlistService.getFriendList(userData.id);
+    const result = await this.friendlistService.getFriendList2(userData.id);
     return result;
   }
 

@@ -6,9 +6,10 @@ import { userProviders } from '../user/user.providers';
 import { FriendlistController } from './friendlist.controller';
 import { friendlistProviders } from './friendlist.providers';
 import { FriendlistService } from './friendlist.service';
+import { UserstatusModule } from 'src/userstatus/userstatus.module';
 
 @Module({
-  imports: [DatabaseModule, UserModule],
+  imports: [DatabaseModule, UserModule, UserstatusModule],
   controllers: [FriendlistController],
   providers: [
     FriendlistService,

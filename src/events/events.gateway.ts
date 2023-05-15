@@ -233,9 +233,10 @@ export default class EventsGateway
         );
         console.log('데이터 저장 완료');
 
+        // Todo. 이거 필요함??
         // change user'status online Need Emit code
-        this.userstatusService.setUserStatus(winUser.id, { status:'online' });
-        this.userstatusService.setUserStatus(loseUser.id, { status:'online' });
+        this.userstatusService.setUserStatus(winUser.id, 'online');
+        this.userstatusService.setUserStatus(loseUser.id, 'online');
 
         // remove socket room
         delete this.gameRoom[roomName];
@@ -260,7 +261,8 @@ export default class EventsGateway
     console.log(`Client connected!!! your socketid is: ${client.id}, myintraId:${intraId}, userId:${userId}`);
 
     // change user'status online Need Emit code
-    this.userstatusService.setUserStatus(userId, { status:'online' });
+    // Todo. 이거필요함?
+    this.userstatusService.setUserStatus(userId, 'online');
 
     // key[socketid] : value[original socket]
     this.sessionMap[intraId] = client;
@@ -451,7 +453,7 @@ export default class EventsGateway
     // ####################################
 
     // change user'status online Need Emit code
-    this.userstatusService.setUserStatus(userId, { status:'in-queue' });
+    this.userstatusService.setUserStatus(userId, 'in-queue');
 
     // create QueueObject
     const queueData: QueueObject = createQueueObject({
@@ -525,13 +527,12 @@ export default class EventsGateway
           gameType: gameType,
         },
       };
-      // 이벤트를 발생시켜서, 
+      // 이벤트를 발생시켜서,
       this.server.to(roomName).emit('matchingcomplete', responseMessage);
 
       // change user'status online Need Emit code
-      this.userstatusService.setUserStatus(userId, { status:'in-game' });
-      
-      
+      this.userstatusService.setUserStatus(userId, 'in-game');
+
       console.log('matching 완료');
       this.startGame(roomName);
     }
@@ -590,7 +591,7 @@ export default class EventsGateway
         break;
       }
     }
-    
+
     // call back 용 response message
     const responseMessage = {state: 0, message: ""};
 
@@ -603,9 +604,8 @@ export default class EventsGateway
       // change user'status online Need Emit code
       const user = await this.userService.findUser(intraId);
       console.log("여긴가", user.id);
-      this.userstatusService.setUserStatus(user.id, { status:'online' });
-
-    } else {              // not found Error 
+      this.userstatusService.setUserStatus(user.id, 'online');
+    } else {              // not found Error
       // fail
       responseMessage.state = 404;
       responseMessage.message = `client socket id ${client.id}가 발견되지못했습니다. 문제를 해결하십시요. 휴먼`;
@@ -628,8 +628,8 @@ export default class EventsGateway
 
     // 2. Check if your opponent is playing or spectating
     const oppUser = await this.userService.findUser(oppIntraId);
-    this.userstatusService.setUserStatus(oppUser.id, { status:'online' });
-    if (this.userstatusService.getUserStatus(oppUser.id).status === 'online') {
+    this.userstatusService.setUserStatus(oppUser.id, 'online');
+    if (this.userstatusService.getUserStatus(oppUser.id) === 'online') {
       const responseMessage = {state: 404, message: "game중인 친구임. ㅅㄱ"};
       return responseMessage;
     }
@@ -720,8 +720,8 @@ export default class EventsGateway
     };
     this.server.to(roomName).emit('matchingcomplete', responseMessage);
 
-    this.userstatusService.setUserStatus(leftUser.id, { status:'in-game' });
-    this.userstatusService.setUserStatus(rightUser.id, { status:'in-game' });
+    this.userstatusService.setUserStatus(leftUser.id, 'in-game');
+    this.userstatusService.setUserStatus(rightUser.id, 'in-game');
 
     this.startGame(roomName);
 

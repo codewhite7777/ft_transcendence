@@ -2,6 +2,7 @@ import { channelBlacklist } from '../typeorm/entities/ChannelBlacklist';
 import { Channel } from '../typeorm/entities/Channel';
 import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import { DataSource } from 'typeorm';
+import { Friendlist } from 'src/typeorm/entities/Friendlist';
 
 export const chatProviders = [
   {
@@ -24,7 +25,7 @@ export const chatProviders = [
   {
     provide: 'FRIENDLIST_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
-      dataSource.getRepository(channelBlacklist),
+      dataSource.getRepository(Friendlist),
     inject: ['DATA_SOURCE'],
   },
 ];

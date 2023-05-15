@@ -71,6 +71,7 @@ export class ChatGateway
     const userId: number = parseInt(client?.handshake?.headers?.userid, 10);
     if (!userId) return;
     this.usMapper.set(userId, client.id);
+    this.UserStatusService.setUserStatus(userId, 'online');
     // 유저가 db상으로 접속된 채널 목록을 가져온다.
     const channelinfos: Channelinfo[] =
       await this.chatService.getChannelInfoByUser(userId);
@@ -116,6 +117,7 @@ export class ChatGateway
       10,
     );
     this.usMapper.delete(userId);
+    this.UserStatusService.setUserStatus(userId, 'offline');
   }
 
   createEventResponse(
@@ -638,14 +640,14 @@ export class ChatGateway
   }
 
   // A의 상태를 state로 바꿉니다.
-  // userId, status
+  // userId, status 'online' | 'in-game' | 'in-queue' | 'offline';
   @SubscribeMessage('state')
   @UseInterceptors(UserValidationInterceptor)
   async updateFriendState(@ConnectedSocket() client, @MessageBody() data) {
     const { user, userId } = data;
     const status: UserStatus = data.status;
 
-    console.log('status: ', status);
+    console.log('status: ', data);
 
     if (!status) return this.createErrorEventResponse(`status 값 에러`);
 
