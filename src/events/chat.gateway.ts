@@ -375,15 +375,8 @@ export class ChatGateway
       );
 
     await this.chatService.joinChannel(channel, clientUser, false, false);
-    const updatedChannel = await this.chatService.getChannelByName(
-      channel.name,
-    );
-
-    console.log('updatedChannel.channelifos: ', updatedChannel.channelinfos);
-
-    const welcomeChannel = await this.chatService.getChannelByName(
-      channel.name,
-    );
+    const welcomeChannel = await this.chatService.getChannelByName(roomName);
+    console.log('welcomdChannel: ', welcomeChannel);
 
     const welcomeData = {
       id: welcomeChannel.id,
