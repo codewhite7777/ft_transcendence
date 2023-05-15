@@ -675,7 +675,7 @@ export default class EventsGateway
     // 2. Check if your opponent is playing or spectating
     const oppUser = await this.userService.findUser(oppIntraId);
     this.userstatusService.setUserStatus(oppUser.id, 'online');
-    if (this.userstatusService.getUserStatus(oppUser.id) === 'in-game') {
+    if (this.userstatusService.getUserStatus(oppUser.id) !== 'online') {
       const responseMessage = { state: 404, message: 'game중인 친구임. ㅅㄱ' };
       return responseMessage;
     }
@@ -785,8 +785,6 @@ export default class EventsGateway
     console.log('playerBackSpace GameObject : ', gameObject);
     // 1p or 2p case
     if (
-      // nickName === gameObject.left.nick ||
-      // nickName === gameObject.right.nick
       nickName === gameObject.left.intraId ||
       nickName === gameObject.right.intraId
     ) {
@@ -818,7 +816,6 @@ export default class EventsGateway
       const winUser = await this.userService.findUser(winintraId);
       const loseUser = await this.userService.findUser(loserintraId);
 
-      // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
       console.log(
         ExitStatus.CRASH,
         gameObject.type.flag,
@@ -837,19 +834,19 @@ export default class EventsGateway
         loseUser.id,
       );
 
-      console.log('2 ', roomName);
-      // remove socket room
+      // 상태 바꾸기
+      this.userstatusService.setUserStatus(loseUser.id, 'online');
+      this.server.to(client.id).emit('clickbackspace', { userId: loseUser.id });
 
       const responseMessage = {
         state: 200,
-        message: 'Test',
+        message: 'playerBackspace으로 인해서 실행된 메시지입니다.',
         dataObject: { player: winner.intraId },
       };
       console.log('response Message', responseMessage);
       this.server.to(roomName).emit('gameover', responseMessage);
       delete this.gameRoom[roomName];
       this.server.socketsLeave(roomName);
-      return responseMessage;
     }
   }
 }
