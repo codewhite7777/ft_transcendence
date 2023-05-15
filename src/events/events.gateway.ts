@@ -664,7 +664,7 @@ export default class EventsGateway
     // 2. Check if your opponent is playing or spectating
     const oppUser = await this.userService.findUser(oppIntraId);
     this.userstatusService.setUserStatus(oppUser.id, 'online');
-    if (this.userstatusService.getUserStatus(oppUser.id) !== 'in-game') {
+    if (this.userstatusService.getUserStatus(oppUser.id) === 'in-game') {
       const responseMessage = {state: 404, message: "game중인 친구임. ㅅㄱ"};
       return responseMessage;
     }
