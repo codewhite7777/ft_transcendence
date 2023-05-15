@@ -6,17 +6,15 @@ import { UserService } from 'src/user/user.service';
 export class CreateChannelValidationPipe implements PipeTransform {
   transform(value: any): any {
     console.log('CreateChannelValidationPipe: ', value);
-    const { kind, roomName } = value;
-    if (roomName === 'gshim') {
+    const { kind, roomName, roomPassword } = value;
+    if (kind === undefined || roomName === undefined || roomName.length < 1) {
       console.log('throw error');
       throw new BadRequestException(
-        'Parameter error: 그 이름은 사용할수없다구?',
+        'Parameter error: kind or roomName is required',
       );
     }
-    if (kind === undefined || roomName === undefined) {
-      throw new BadRequestException(
-        'Parameter error: kind and roomName are required.',
-      );
+    if (kind === 1 && (roomName === undefined || roomName.length < 1)) {
+      throw new BadRequestException('Parameter error: password is required.');
     }
     return value;
   }
