@@ -262,9 +262,8 @@ export class ChatGateway
   }
 
   @SubscribeMessage('getChannel')
-  async getChannel(@ConnectedSocket() client, @MessageBody() data) {
-    //console.log('detect getChannel: ', client.id, ' ', data);
-    //console.log('getAllChannel: ', await this.chatService.getAllChannel());
+  async getChannel(@ConnectedSocket() client) {
+    // private방은 제외하고 가져옵니다
     const channels = (await this.chatService.getAllChannel()).map(
       (channel) => ({
         id: channel.id,
@@ -273,10 +272,7 @@ export class ChatGateway
         owner: channel.owner.intraid,
       }),
     );
-    console.log('getChannel', channels);
-    //client.emit('getChannel', this.createEventResponse(true, '', channels));
     client.emit('getChannel', channels);
-    //return channels;
   }
 
   // Todo. user가 채널에서 mute상태인지 확인합니다.
@@ -561,6 +557,12 @@ export class ChatGateway
     { roomName, user, clientUser, channel }: any,
   ) {
     user.socketId = this.usMapper.get(user.id);
+    // 요청자가 admin인가?
+    if (!this.chatService.isAdmin(channel, user))
+      return `Error: 당신은 admin권한이 없습니다.`;
+
+    // 대상자가 방장인가?
+    if (user.id === channel.owner.id) return `Error: 대상이 방장입니다.`;
     console.log(`roomName: ${roomName}, userId: ${user.id}`);
     const duration = 10;
 
@@ -587,7 +589,7 @@ export class ChatGateway
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
-      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
+      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Mute 당했습니다!`);
   }
 
   @SubscribeMessage('ban')
