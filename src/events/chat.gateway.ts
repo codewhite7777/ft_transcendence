@@ -25,8 +25,9 @@ import {
   UserValidationInterceptor,
 } from '../intercept/ChannelValidation.intercept';
 import { SocketAuthGuard } from '../auth/socket_auth_guard';
-
-type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';
+import { UserblacklistService } from '../userblacklist/userblacklist.service';
+import { UserstatusService } from '../userstatus/userstatus.service';
+import { UserStatus } from '../userstatus/userstatus.interface';
 
 @WebSocketGateway(4242, {
   namespace: '/chat',
@@ -53,6 +54,8 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly userService: UserService,
+    private readonly userBlackListService: UserblacklistService,
+    private readonly UserStatusService: UserstatusService,
   ) {
     this.usMapper = new Map<number, string>();
   }
@@ -85,7 +88,7 @@ export class ChatGateway
       users: channel.ch.channelinfos.map((channelinfo) => ({
         id: channelinfo.user.id,
         nickname: channelinfo.user.nickname,
-        intraId: channelinfo.user.intraid,
+        intraid: channelinfo.user.intraid,
         socketId: this.usMapper.get(channelinfo.userid),
         avatar: channelinfo.user.avatar,
         status: this.usMapper.get(channelinfo.userid) ? 'online' : 'offline', // 이 부분은 실제로 상태를 가져오는 코드로 교체해야 합니다.
@@ -634,25 +637,31 @@ export class ChatGateway
     return userListwithSocketId;
   }
 
+  // A의 상태를 state로 바꿉니다.
+  // userId, status
   @SubscribeMessage('state')
+  @UseInterceptors(UserValidationInterceptor)
   async updateFriendState(@ConnectedSocket() client, @MessageBody() data) {
+    const { user, userId } = data;
     const status: UserStatus = data.status;
 
-    // socket의 User를 가져온다.
-    const userId = client?.handshake?.userid; // <- 이 부분은 client인자에서 파이프를 통해 한번 걸러서 가져오는게 좋을 것 같아.
-    const user = await this.userService.findUserById(userId);
-    if (user === null) return `Error: 알수없는 유저입니다.`;
+    console.log('status: ', status);
+
+    if (!status) return this.createErrorEventResponse(`status 값 에러`);
+
+    this.UserStatusService.setUserStatus(user.id, status);
+
     // User를 Friend로 추가한 유저들의 리스트를 가져온다
     // 유저리스트의 각 유저들의 socketid를 넣어준다.
-    const userList = await this.chatService.getFriend(userId);
+    const userList = await this.chatService.getFriend(user.id);
     const updateData = { userId, status };
     userList.forEach((user) =>
       this.server
         .to(this.usMapper.get(user.userId.id))
-        .emit('state', updateData),
+        .emit('user-state', updateData),
     );
 
-    return 'Success';
+    return this.createEventResponse(true, `success`, []);
   }
 
   @SubscribeMessage('getProfile')
@@ -670,9 +679,20 @@ export class ChatGateway
   ) {
     console.log('channel-invite: ', roomName, user, clientUser, channel);
 
+    // Todo. 대상이 나를 밴한 경우.
+    const ret = await this.userBlackListService.getBlackListOne(
+      user.id,
+      clientUser.id,
+    );
+    console.log('블랙여부:', ret);
+    if (ret)
+      return this.createErrorEventResponse('상대가 당신을 black하였습니다.');
+
     // Todo. 초대받은 유저가 이미 해당 방에 참여한 경우 에러를 발생시킨다.
 
     // Todo. DM방의 경우, 초대를 할 수 없다.
+    if (channel.kind === 3)
+      this.createErrorEventResponse('DM 방에서는 초대를 할 수 없습니다.');
 
     this.server
       .to(this.usMapper.get(user.id))
@@ -692,6 +712,15 @@ export class ChatGateway
   ) {
     user.socketId = this.usMapper.get(user.id);
     console.log('directMessage: ', user, clientUser);
+
+    // Todo. 대상이 나를 밴한 경우.
+    const ret = await this.userBlackListService.getBlackListOne(
+      user.id,
+      clientUser.id,
+    );
+    console.log('블랙여부:', ret);
+    if (ret)
+      return this.createErrorEventResponse('상대가 당신을 black하였습니다.');
 
     this.server
       .to(this.usMapper.get(user.id))

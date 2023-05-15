@@ -26,6 +26,12 @@ export class UserblacklistService {
     return myBlackList;
   }
 
+  async getBlackListOne(userId1: number, userId2: number) {
+    return await this.userblacklistRepository.count({
+      where: { userId1, userId2 },
+    });
+  }
+
   //블랙 리스트 생성
   async createBlackList(
     myID: number,

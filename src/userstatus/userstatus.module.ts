@@ -4,8 +4,7 @@ import { UserstatusService } from './userstatus.service';
 
 @Module({
   controllers: [UserstatusController],
-  providers: [UserstatusService]
+  providers: [UserstatusService],
+  exports: [UserstatusService],
 })
-export class UserstatusModule {
-  
-}
+export class UserstatusModule {}
