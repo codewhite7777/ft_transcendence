@@ -114,6 +114,20 @@ export class ChatGateway
       'initChannels',
       this.createEventResponse(true, '', channelswithSocketId),
     );
+
+    // 유저가 블랙한 회원목록을 가져온다.
+    const userBlackList = await this.chatService.getUserBlacklist(userId);
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
+    const userListwithSocketId = userBlackList.map((user) => ({
+      ...user,
+      socketId: this.usMapper.get(user.userId3.id),
+    }));
+
+    client.emit(
+      'getBlacklist',
+      this.createEventResponse(true, '', userListwithSocketId),
+    );
+
     return this.createEventResponse(true, 'connect success', []);
   }
 
@@ -658,6 +672,22 @@ export class ChatGateway
     const userListwithSocketId = userList.map((user) => ({
       ...user,
       socketId: this.usMapper.get(user.userId.id),
+    }));
+    // 유저리스트를 반환한다
+    return userListwithSocketId;
+  }
+
+  @SubscribeMessage('getBlacklist')
+  @UseInterceptors(ClientValidationInterceptor)
+  async getBlacklisst(@ConnectedSocket() client, @MessageBody() data) {
+    const { userId, clientUser } = data;
+
+    // 유저가 블랙한 회원목록을 가져온다.
+    const userList = await this.chatService.getUserBlacklist(userId);
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
+    const userListwithSocketId = userList.map((user) => ({
+      ...user,
+      socketId: this.usMapper.get(user.userId3.id),
     }));
     // 유저리스트를 반환한다
     return userListwithSocketId;
