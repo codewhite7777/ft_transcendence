@@ -809,7 +809,7 @@ export default class EventsGateway
 
       // 상태 바꾸기
       this.userstatusService.setUserStatus(loseUser.id, 'online');
-      this.server.to(client.id).emit('clickbackspace');
+      this.server.to(client.id).emit('clickbackspace', {userId:loseUser.id});
 
       const responseMessage = {
         state: 200,
