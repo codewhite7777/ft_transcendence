@@ -262,9 +262,8 @@ export class ChatGateway
   }
 
   @SubscribeMessage('getChannel')
-  async getChannel(@ConnectedSocket() client, @MessageBody() data) {
-    //console.log('detect getChannel: ', client.id, ' ', data);
-    //console.log('getAllChannel: ', await this.chatService.getAllChannel());
+  async getChannel(@ConnectedSocket() client) {
+    // private방은 제외하고 가져옵니다
     const channels = (await this.chatService.getAllChannel()).map(
       (channel) => ({
         id: channel.id,
@@ -273,10 +272,7 @@ export class ChatGateway
         owner: channel.owner.intraid,
       }),
     );
-    console.log('getChannel', channels);
-    //client.emit('getChannel', this.createEventResponse(true, '', channels));
     client.emit('getChannel', channels);
-    //return channels;
   }
 
   // Todo. user가 채널에서 mute상태인지 확인합니다.

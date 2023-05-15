@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Channel } from '../typeorm/entities/Channel';
 import { Channelinfo } from '../typeorm/entities/Channelinfo';
 import { User } from '../typeorm/entities/User';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
 import * as bcrypt from 'bcrypt';
 import { Friendlist } from 'src/typeorm/entities/Friendlist';
@@ -74,6 +74,7 @@ export class ChatService {
   // read channel
   async getAllChannel() {
     return this.channelRepository.find({
+      where: { kind: Not(2) },
       relations: { owner: true },
       select: {
         owner: { intraid: true },
