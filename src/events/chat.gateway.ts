@@ -71,7 +71,18 @@ export class ChatGateway
     const userId: number = parseInt(client?.handshake?.headers?.userid, 10);
     if (!userId) return;
     this.usMapper.set(userId, client.id);
+
+    // User를 Friend로 추가한 유저들의 리스트를 가져온다
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
     this.UserStatusService.setUserStatus(userId, 'online');
+    const userList = await this.chatService.getFriend(userId);
+    const updateData = { userId, status: 'online' };
+    userList.forEach((user) =>
+      this.server
+        .to(this.usMapper.get(user.userId.id))
+        .emit('user-state', updateData),
+    );
+
     // 유저가 db상으로 접속된 채널 목록을 가져온다.
     const channelinfos: Channelinfo[] =
       await this.chatService.getChannelInfoByUser(userId);
@@ -110,14 +121,24 @@ export class ChatGateway
   // 파라미터로 클라이언트를 가져올 수 있다.
   // Todo 이후, 참여한 모든 방을 나가도록 처리하면 될듯하다.
   // 이게 가능하다는 것은, 특정 user가 소켓을 연결했을때 특정방으로 바로 입장 시킬수도 있음을 의미한다.
-  handleDisconnect(@ConnectedSocket() client: Socket) {
+  async handleDisconnect(@ConnectedSocket() client: Socket) {
     console.log('handleDisconnect');
     const userId: number = parseInt(
       client?.handshake?.headers?.userid as string,
       10,
     );
     this.usMapper.delete(userId);
+
+    // User를 Friend로 추가한 유저들의 리스트를 가져온다
+    // 유저리스트의 각 유저들의 socketid를 넣어준다.
     this.UserStatusService.setUserStatus(userId, 'offline');
+    const userList = await this.chatService.getFriend(userId);
+    const updateData = { userId, statue: 'offline' };
+    userList.forEach((user) =>
+      this.server
+        .to(this.usMapper.get(user.userId.id))
+        .emit('user-state', updateData),
+    );
   }
 
   createEventResponse(
@@ -654,10 +675,9 @@ export class ChatGateway
 
     if (!status) return this.createErrorEventResponse(`status 값 에러`);
 
-    this.UserStatusService.setUserStatus(user.id, status);
-
     // User를 Friend로 추가한 유저들의 리스트를 가져온다
     // 유저리스트의 각 유저들의 socketid를 넣어준다.
+    this.UserStatusService.setUserStatus(user.id, status);
     const userList = await this.chatService.getFriend(user.id);
     const updateData = { userId, status };
     userList.forEach((user) =>
