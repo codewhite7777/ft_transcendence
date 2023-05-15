@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { channelBlacklist } from 'src/typeorm/entities/ChannelBlacklist';
 import * as bcrypt from 'bcrypt';
 import { Friendlist } from 'src/typeorm/entities/Friendlist';
+import { Userblacklist } from 'src/typeorm/entities/Userblacklist';
 
 @Injectable()
 export class ChatService {
@@ -20,6 +21,8 @@ export class ChatService {
     private userRepository: Repository<User>,
     @Inject('FRIENDLIST_REPOSITORY')
     private friendListRepository: Repository<Friendlist>,
+    @Inject('USERBLACKLIST_REPOSITORY')
+    private userBlackListRepository: Repository<Userblacklist>,
   ) {}
 
   // create channel(종류, ownner, 제목, 비번)
@@ -322,6 +325,15 @@ export class ChatService {
         userId2: _userId,
       },
       relations: { userId: true },
+    });
+  }
+
+  async getUserBlacklist(_userId: number) {
+    return await this.userBlackListRepository.find({
+      where: {
+        userId1: _userId,
+      },
+      relations: { userId3: true },
     });
   }
 }
