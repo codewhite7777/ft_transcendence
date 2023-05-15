@@ -409,10 +409,20 @@ export class ChatGateway
         `Error: 클라이언트가 참여한 채널 중 ${roomName}이 존재하지 않습니다.`,
       );
 
-    if (channel.owner.id === clientUser.id)
-      return this.createErrorEventResponse(
-        `Error: 방장은 채널을 나갈 수 없습니다. 다른 유저에게 방장 권한을 넘기고 다시 시도하세요.`,
+    if (channel.owner.id === clientUser.id) {
+      // channel, channelinfo를 모두 삭제합니다.
+      this.chatService.deleteChannelById(channel.id);
+
+      this.server
+        .to(roomName)
+        .emit('channel-deleted', { roomName, owner: clientUser });
+
+      return this.createEventResponse(
+        true,
+        `Success: 해당 채널을 삭제하였습니다.`,
+        [],
       );
+    }
 
     // this.server.to(roomName).emit('chat', {
     //   roomName,

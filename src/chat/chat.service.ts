@@ -165,8 +165,19 @@ export class ChatService {
   }
 
   async deleteChannelById(channelId: number) {
-    const ret = this.channelRepository.delete(channelId);
-    console.log(ret); // 결과값에 따라 삭제되었는지 안삭제되었는지 판단하여 반환할것.
+    // Find the channel
+    const channel = await this.channelRepository.findOne({
+      where: { id: channelId },
+      relations: ['channelinfos'],
+    });
+    // Check if channel exists
+    if (!channel) throw new Error('Channel not found');
+
+    // Remove all associated channelinfos
+    await this.channelInfoRepository.remove(channel.channelinfos);
+
+    // Remove the channel
+    await this.channelRepository.remove(channel);
   }
 
   // join channel(누가, 어디채팅방에 참여한다)
