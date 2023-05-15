@@ -33,6 +33,17 @@ export class UserblacklistController {
     return result;
   }
 
+  @Get(':id')
+  async getTargetBlackList(@Param('id') intraID: string, @Req() req: Request) {
+    const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
+    if (cookie == undefined) throw new NotFoundException('cookie not found');
+    const userData = await this.userService.findUser(intraID);
+    if (userData == null) throw new NotFoundException(`client not found.`);
+    const result = await this.userblacklistService.getBlackList(userData.id);
+    return result;
+  }
+
+
   //{
   //  "friend":"alee"
   //}
