@@ -289,14 +289,17 @@ export default class EventsGateway
 
           winScore = winner.score;
           loseScore = loser.score;
-          winId = winner.nick;
-          loserId = loser.nick;
+          // winId = winner.nick;
+          // loserId = loser.nick;
 
+          winId = winner.intraId;
+          loserId = loser.intraId;
           const responseMessage = {
             state: 200,
             message: 'Disconnect 2p Win',
-            dataObject: { player: winner.nick },
+            dataObject: { player: winner.intraId },
           };
+					console.log('gameObject : ', gameObject);
           this.server.to(roomName).emit('gameover', responseMessage);
         }
         // player 1p win
@@ -306,14 +309,15 @@ export default class EventsGateway
 
           winScore = winner.score;
           loseScore = loser.score;
-          winId = winner.nick;
-          loserId = loser.nick;
+          winId = winner.intraId;
+          loserId = loser.intraId;
 
           const responseMessage = {
             state: 200,
             message: 'Disconnect 1p Win',
-            dataObject: { player: winner.nick },
+            dataObject: { player: winner.intraId },
           };
+					console.log('gameObject : ', gameObject);
           this.server.to(roomName).emit('gameover', responseMessage);
         }
 
@@ -338,8 +342,8 @@ export default class EventsGateway
         //   loserId,
         // );
 
-        const winUser = await this.userService.findNickname(winId);
-        const loseUser = await this.userService.findNickname(loserId);
+        const winUser = await this.userService.findUser(winId);
+        const loseUser = await this.userService.findUser(loserId);
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
         console.log(
@@ -732,13 +736,17 @@ export default class EventsGateway
   @SubscribeMessage('playerBackspace')// TODO
   async BackClick(@ConnectedSocket() client, @MessageBody() data) {
     const { roomName, nickName } = data;
-
+		
     const gameObject = this.gameRoom[roomName];
+		console.log('playerBackSpace GameObject : ', gameObject);
     // 1p or 2p case
     if (
-      nickName === gameObject.left.nick ||
-      nickName === gameObject.right.nick
+      // nickName === gameObject.left.nick ||
+      // nickName === gameObject.right.nick
+      nickName === gameObject.left.intraId ||
+      nickName === gameObject.right.intraId
     ) {
+			console.log('backspace 첫 조건문');
       clearInterval(this.intervalIds[roomName]);
       delete this.intervalIds[roomName];
 
@@ -751,16 +759,16 @@ export default class EventsGateway
       const gameType: number = gameObject.type.flag;
 
       const winner: PlayerObject =
-        data.left.nick !== nickName ? data.left : data.right;
+			gameObject.left.intraId !== nickName ? gameObject.left : gameObject.right;
       const loser: PlayerObject =
-        data.left.nick === nickName ? data.left : data.right;
+			gameObject.left.intraId === nickName ? gameObject.left : gameObject.right;
       const winScore: number = winner.score;
       const loseScore: number = loser.score;
       const winintraId: string = winner.intraId;
       const loserintraId: string = loser.intraId;
 
-      const winUser = await this.userService.findNickname(winintraId);
-      const loseUser = await this.userService.findNickname(loserintraId);
+      const winUser = await this.userService.findUser(winintraId);
+      const loseUser = await this.userService.findUser(loserintraId);
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
       console.log(ExitStatus.CRASH, gameObject.type.flag, winScore, loseScore, winintraId, loserintraId);
@@ -772,17 +780,19 @@ export default class EventsGateway
           winUser.id,
           loseUser.id,
         );
-
+				
+			console.log('2 ', roomName);
       // remove socket room
       delete this.gameRoom[roomName];
       this.server.socketsLeave(roomName);
-
       const responseMessage = {
         state: 200,
         message: 'Test',
         dataObject: { player: winner.intraId },
       };
       this.server.to(roomName).emit('gameover', responseMessage);
+
+			console.log('3 ', responseMessage);
     }
   }
 }

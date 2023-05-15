@@ -56,11 +56,11 @@ export class AuthController {
 
     //세션 중복 확인
     // 이미 해당 세션에 대한 데이터가 존재할 경우, 진행을 거부한다.
-    const storedSession = this.userService.getSession(intraData['login']);
-    console.log('storedSession: ', storedSession);
-    if (storedSession != undefined) {
-      throw new NotAcceptableException('Session already connected');
-    }
+    // const storedSession = this.userService.getSession(intraData['login']);
+    // console.log('storedSession: ', storedSession);
+    // if (storedSession != undefined) {
+    //   throw new NotAcceptableException('Session already connected');
+    // }
 
     //otp 미 사용자 처리
     if (result.isotp == false) {
