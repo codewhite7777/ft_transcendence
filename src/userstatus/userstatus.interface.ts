@@ -1,3 +1,1 @@
-export interface UserStatus {
-  status: 'online' | 'in-game' | 'in-queue' | 'offline';
-}
+export type UserStatus = 'online' | 'in-game' | 'in-queue' | 'offline';

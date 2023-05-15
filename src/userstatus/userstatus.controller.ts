@@ -10,7 +10,7 @@ export class UserstatusController {
     const userStatus = this.userStatusService.getUserStatus(userId);
     if (userStatus) {
       return {
-        status: userStatus.status,
+        status: userStatus,
       };
     } else {
       return {
