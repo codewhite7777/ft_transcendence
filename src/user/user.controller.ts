@@ -37,6 +37,7 @@ export class UserController {
     const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
     const target = this.userService.getIntraID(cookie);
+    if (target == null) throw new NotFoundException(`There's no cookie data`);
     const userData = await this.userService.findUser(target);
     if (userData == null) throw new NotFoundException(`client not found.`);
     return userData;

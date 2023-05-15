@@ -27,7 +27,7 @@ export class AuthController {
 
   @Get()
   async AuthLogic(@Req() req: any, @Res() res: Response) {
-    let redirectURL = 'http://localhost:3001/loginok'; //main page url
+    let redirectURL = 'http://localhost:3001/'; //main page url
     //42 Resource 서버에 인트라 아이디 정보 요청
 
     //const accessToken: string = req.user;
@@ -68,8 +68,8 @@ export class AuthController {
       const sessionData = this.userService.createSession(intraData['login']);
       //for debug
       console.log(`otp 미 사용자 세션 생성`);
-      console.log(`session Key : ${sessionData.key}`);
-      console.log(`session User : ${sessionData.name}`);
+      console.log(`create session Key: ${sessionData.key}`);
+      console.log(`create session User : ${sessionData.name}`);
       //쿠키 값 전달
       res.cookie('session_key', sessionData.key);
       res.cookie('nickname', result.intraid);

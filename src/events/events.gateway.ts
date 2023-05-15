@@ -274,6 +274,8 @@ export default class EventsGateway
       client?.handshake?.headers?.userid,
       10,
     );
+    console.log('[GAME]client?.handshake:', client?.handshake)
+    console.log('[GAME]socketUserId:', socketUserId)
 
     // queue 지우자.
     for (var i = 0; i < this.matchNormalQueue.length; i++) {
@@ -293,7 +295,7 @@ export default class EventsGateway
     }
 
     const clientUser = await this.userService.findUserById(socketUserId);
-    console.log(clientUser);
+    console.log('[GAME]handleDisconnect: ',clientUser);
 
     // change client status
     this.userstatusService.setUserStatus(clientUser.id, 'offline');
@@ -397,9 +399,9 @@ export default class EventsGateway
         this.server.socketsLeave(roomName);
       }
     } else {
-      console.log('undifined');
+      console.log('[GAME]user not online');
     }
-
+    
     this.userService.deleteSession(clientUser.intraid);
     // const intraId = loseUser;
     // delete this.sessionMap[intraId]; // TODO 연결이 끊어질때 나의 닉네임을 보낼 수  있음?

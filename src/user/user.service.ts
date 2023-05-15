@@ -17,12 +17,13 @@ export class UserService {
     let i = 0;
     for (; i < this.sessionArr.length; i++)
     {
-      console.log(this.sessionArr[i]);
+      console.log('[GAME] printSession', this.sessionArr[i]);
     }
     console.log('-------------');
   }
 
   deleteSession(intraID: string): void {
+    console.log('[GAME]deleteSession');
     const index = this.sessionArr.findIndex(session => session.name === intraID);
     if (index !== -1) {
     this.sessionArr.splice(index, 1);
@@ -38,8 +39,15 @@ export class UserService {
 
   //세션 키로 인트라 아이디 찾기
   getIntraID(sessionKey: string): string | undefined {
+    // console.log('!!!!!!!!!!!!', sessionKey);
     const result = this.sessionArr.find((item) => item.key == sessionKey);
-    return result ? result.name : undefined;
+    console.log('세션키로 아이디 찾기 :', result);
+    if (result == undefined)
+    {
+      console.log(' --- undefined');
+      return undefined;
+    }
+    return result.name;
   }
 
   //인트라 아이디로 세션 찾기

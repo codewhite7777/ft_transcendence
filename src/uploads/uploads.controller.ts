@@ -30,11 +30,19 @@ export class UploadsController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
   ) {
+    console.log('파일 업로드 파트 시작');
     const cookie = this.cookieService.extractCookie(req.cookies['session_key']);
     if (cookie == undefined) throw new NotFoundException('cookie not found');
+    console.log('쿠키 : ', cookie);
+    console.log('--------------');
+    this.userService.printSession();
+    console.log('--------------');
     const target = this.userService.getIntraID(cookie);
+    console.log('타겟 : ', target);
     const fileRet = await this.uploadsService.saveFile(file);
     const userData = await this.userService.findUser(target);
+    console.log('target User');
+    console.log(userData);
     const fileDir = `/uploads/${file.originalname}`;
     const isFileExist = await this.uploadsService.isLocalFileExist(userData);
     console.log(`로컬 파일 저장 여부 : ${isFileExist}`);
