@@ -9,14 +9,12 @@ export class UserService {
 
   constructor(
     @Inject('USER_REPOSITORY') private userRepository: Repository<User>,
-  ) {
-  }
+  ) {}
 
   printSession(): void {
     console.log('-------------');
     let i = 0;
-    for (; i < this.sessionArr.length; i++)
-    {
+    for (; i < this.sessionArr.length; i++) {
       console.log('[GAME] printSession', this.sessionArr[i]);
     }
     console.log('-------------');
@@ -24,9 +22,11 @@ export class UserService {
 
   deleteSession(intraID: string): void {
     console.log('[GAME]deleteSession');
-    const index = this.sessionArr.findIndex(session => session.name === intraID);
+    const index = this.sessionArr.findIndex(
+      (session) => session.name === intraID,
+    );
     if (index !== -1) {
-    this.sessionArr.splice(index, 1);
+      this.sessionArr.splice(index, 1);
     }
   }
 
@@ -42,8 +42,7 @@ export class UserService {
     // console.log('!!!!!!!!!!!!', sessionKey);
     const result = this.sessionArr.find((item) => item.key == sessionKey);
     console.log('세션키로 아이디 찾기 :', result);
-    if (result == undefined)
-    {
+    if (result == undefined) {
       console.log(' --- undefined');
       return undefined;
     }
