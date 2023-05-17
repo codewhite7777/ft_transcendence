@@ -12,6 +12,7 @@ import { Request } from 'express';
 import { CookieService } from '../cookie/cookie.service';
 import { UserService } from '../user/user.service';
 import { FriendlistService } from './friendlist.service';
+import { UserstatusService } from 'src/userstatus/userstatus.service';
 
 @Controller('/friendlist')
 export class FriendlistController {
@@ -19,6 +20,7 @@ export class FriendlistController {
     private readonly userService: UserService,
     private readonly cookieService: CookieService,
     private readonly friendlistService: FriendlistService,
+    private readonly userStatusService: UserstatusService,
   ) {}
 
   @Get()
@@ -48,8 +50,15 @@ export class FriendlistController {
     const userData = await this.userService.findUser(intraID);
     const friendID = await this.userService.findUser(friend);
     if (friendID == null) throw new NotFoundException('friend not found.');
-    await this.friendlistService.createFriendList(userData.id, friendID.id);
-    return;
+    const friendlist = await this.friendlistService.createFriendList(
+      userData.id,
+      friendID.id,
+    );
+    const newFriend = await this.userService.findUserByID(friendlist.userId2);
+    return {
+      ...newFriend,
+      status: this.userStatusService.getUserStatus(newFriend.id),
+    };
   }
 
   //친구 삭제 요청
