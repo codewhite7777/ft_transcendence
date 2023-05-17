@@ -77,12 +77,6 @@ export class UserService {
     });
   }
 
-  async findUserById(id: number): Promise<User> {
-    return await this.userRepository.findOne({
-      where: { id },
-    });
-  }
-
   //유저 생성
   async createUser(
     intraID: string,

@@ -298,7 +298,7 @@ export default class EventsGateway
       }
     }
 
-    const clientUser = await this.userService.findUserById(socketUserId);
+    const clientUser = await this.userService.findUserByID(socketUserId);
     console.log('[GAME]handleDisconnect: ', clientUser);
 
     // change client status
