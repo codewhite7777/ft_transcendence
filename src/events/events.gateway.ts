@@ -259,17 +259,22 @@ export default class EventsGateway
     const intraId = client.handshake.headers.intraid;
     const userId = client.handshake.headers.userid;
 
-    // if connected, print socketid #debug code
     console.log(
       `Client connected!!! your socketid is: ${client.id}, myintraId:${intraId}, userId:${userId}`,
     );
 
     // change user'status online Need Emit code
-    // Todo. 이거필요함?
     this.userstatusService.setUserStatus(userId, 'online');
 
-    // key[socketid] : value[original socket]
-    this.sessionMap[intraId] = client;
+    if (!this.sessionMap[intraId]) {
+      this.sessionMap[intraId] = client;
+    } else {
+      if (!this.sessionMap[intraId].connected) {
+        this.sessionMap[intraId] = client;
+      } else {
+        client.disconnect();
+      }
+    }
   }
 
   // 연결된 socket이 끊어질때 동작하는 함수 - OnGatewayDisconnect 짝궁
