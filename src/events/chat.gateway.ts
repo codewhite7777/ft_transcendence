@@ -476,7 +476,7 @@ export class ChatGateway
   async handleDelegate(
     @ConnectedSocket() client,
     @MessageBody()
-    { roomName, user, channel }: any,
+    { roomName, user, channel, clientUser }: any,
   ) {
     // 핵심 위임로직.
     await this.chatService.delegate(channel, user);
@@ -484,10 +484,11 @@ export class ChatGateway
     this.server.to(roomName).emit('owner-granted', { roomName, user });
     this.server
       .to(roomName)
-      .emit(
-        'chat',
-        `Server🤖: 유저 ${client.id}가 ${roomName}의 새 방장입니다!`,
-      );
+      // .emit(
+      //   'chat',
+      //   `Server🤖: 유저 ${client.id}가 ${roomName}의 새 방장입니다!`,
+      // ); 
+      .emit('chat', { roomName, message:`Server🤖: 유저 ${clientUser.nickname}가 ${roomName}의 새 방장입니다!` });
     return `Success: 채널 ${roomName}의 방장 권한을 클라이언트 ${user.intraid}에게 성공적으로 위임했습니다.`;
   }
 
@@ -509,10 +510,11 @@ export class ChatGateway
     this.server.to(roomName).emit('admin-granted', { roomName, user });
     this.server
       .to(roomName)
-      .emit(
-        'chat',
-        `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 획득했습니다!`,
-      );
+      // .emit(
+      //   'chat',
+      //   `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 획득했습니다!`,
+      // );
+      .emit('chat', { roomName, message:`Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 획득했습니다!` });
 
     return `Success: 채널 ${roomName}의 Admin 권한을 클라이언트 ${user.intraid}에게 성공적으로 부여했습니다.`;
   }
@@ -535,10 +537,11 @@ export class ChatGateway
     this.server.to(roomName).emit('admin-revoked', { roomName, user });
     this.server
       .to(roomName)
-      .emit(
-        'chat',
-        `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 잃었습니다!`,
-      );
+      // .emit(
+      //   'chat',
+      //   `Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 잃었습니다!`,
+      // );
+      .emit('chat', { roomName, message:`Server🤖: 유저 ${user.nickname}가 ${roomName}의 Admin권한을 잃었습니다!` });
     return `Success: 채널 ${roomName}의 Admin 권한을 클라이언트 ${user.nickname}에게서 회수했습니다.`;
   }
 
@@ -589,7 +592,9 @@ export class ChatGateway
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
-      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Mute 당했습니다!`);
+      //.emit('chat', `Server🤖: 유저 ${user.nickname}가 Mute 당했습니다!`);
+      // .emit('chat', this.createEventResponse(true, `Server🤖: 유저 ${user.nickname}가 Mute 당했습니다!`, [user]));
+      .emit('chat', { roomName, message:`Server🤖: 유저 ${user.nickname}가 Mute 당했습니다!` });
   }
 
   @SubscribeMessage('ban')
@@ -616,7 +621,8 @@ export class ChatGateway
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
-      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
+      // .emit('chat', `Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!`);
+      .emit('chat', { roomName, message:`Server🤖: 유저 ${user.nickname}가 Ban 당했습니다!` });
 
     // socket상에서 room에서 퇴장시킨다.
     const userToKickSocketId = this.usMapper.get(user.id);
@@ -649,7 +655,8 @@ export class ChatGateway
     // Todo. 누구에게 강퇴당했는지 명시할것.
     this.server
       .to(roomName)
-      .emit('chat', `Server🤖: 유저 ${user.nickname}가 Kick 당했습니다!`);
+      // .emit('chat', `Server🤖: 유저 ${user.nickname}가 Kick 당했습니다!`);
+      .emit('chat', { roomName, message:`Server🤖: 유저 ${user.nickname}가 Kick 당했습니다!` });
 
     // socket상에서 room에서 퇴장시킨다.
     const userToKickSocketId = this.usMapper.get(user.id);
