@@ -45,9 +45,9 @@ export class ChannelValidationInterceptor implements NestInterceptor {
     const channel = await this.chatService.getChannelByName(roomName);
     if (channel === null)
       throw new BadRequestException(`Error: Unknown channel ${roomName}`);
-    const user = await this.userService.findUserById(userId);
+    const user = await this.userService.findUserByID(userId);
     if (user === null) throw new BadRequestException(`Error: Unknown user.`);
-    const clientUser = await this.userService.findUserById(socketUserId);
+    const clientUser = await this.userService.findUserByID(socketUserId);
     if (clientUser === null) {
       throw new BadRequestException(`Error: Unknown user.`);
     }
@@ -74,7 +74,7 @@ export class UserValidationInterceptor implements NestInterceptor {
       throw new BadRequestException('Parameter error: require userId');
     }
 
-    const user = await this.userService.findUserById(userId);
+    const user = await this.userService.findUserByID(userId);
     if (user === null) throw new BadRequestException(`Error: Unknown user.`);
 
     data.user = user;
@@ -128,7 +128,7 @@ export class ClientValidationInterceptor implements NestInterceptor {
       10,
     );
 
-    const clientUser = await this.userService.findUserById(socketUserId);
+    const clientUser = await this.userService.findUserByID(socketUserId);
     if (clientUser === null) {
       throw new BadRequestException(`Error: Unknown user.`);
     }

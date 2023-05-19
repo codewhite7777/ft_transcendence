@@ -27,7 +27,9 @@ export class AuthController {
 
   @Get()
   async AuthLogic(@Req() req: any, @Res() res: Response) {
-    let redirectURL = 'http://localhost:3001/'; //main page url
+    //let redirectURL = 'http://localhost:3001/'; //main page url
+    let redirectURL = this.configService.get<string>('FRONTEND_URL'); //main page url
+
     //42 Resource 서버에 인트라 아이디 정보 요청
 
     //const accessToken: string = req.user;
@@ -75,7 +77,9 @@ export class AuthController {
       res.cookie('nickname', result.intraid);
       res.cookie('userData', JSON.stringify(result));
       //리디렉션 join 설정 asdasdfasdfa
-      if (firstFlag == true) redirectURL = 'http://localhost:3001/join';
+      //if (firstFlag == true) redirectURL = 'http://localhost:3001/join';
+      if (firstFlag == true)
+        redirectURL = `${this.configService.get('FRONTEND_URL')}/join`;
     } else {
       //for debug
       console.log(`otp 사용자 세션 미 생성`);
@@ -93,7 +97,8 @@ export class AuthController {
       res.cookie('email', result.email);
 
       //리디렉션 otp 설정
-      redirectURL = 'http://localhost:3001/otp';
+      //redirectURL = 'http://localhost:3001/otp';
+      redirectURL = `${this.configService.get('FRONTEND_URL')}/otp`;
     }
     res.redirect(redirectURL);
     return;

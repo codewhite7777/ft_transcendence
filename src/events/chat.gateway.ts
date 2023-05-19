@@ -224,7 +224,7 @@ export class ChatGateway
       client?.handshake?.headers?.userid,
       10,
     );
-    const clientUser = await this.userService.findUserById(socketUserId);
+    const clientUser = await this.userService.findUserByID(socketUserId);
     if (clientUser === null)
       return this.createErrorEventResponse('유저정보가없어용');
     // 채널 생성(중복검사 yes)
@@ -287,7 +287,7 @@ export class ChatGateway
       client?.handshake?.headers?.userid,
       10,
     );
-    const clientUser = await this.userService.findUserById(socketUserId);
+    const clientUser = await this.userService.findUserByID(socketUserId);
     if (clientUser === null) {
       return this.createErrorEventResponse(`당신의 user정보가 없습니다.`);
     }
@@ -317,7 +317,7 @@ export class ChatGateway
       client?.handshake?.headers?.userid,
       10,
     );
-    const clientUser = await this.userService.findUserById(socketUserId);
+    const clientUser = await this.userService.findUserByID(socketUserId);
     clientUser.socketId = this.usMapper.get(clientUser.id);
     if (clientUser === null) {
       return this.createErrorEventResponse(`당신의 user정보가 없습니다.`);
@@ -666,7 +666,7 @@ export class ChatGateway
     // hi
     // socket의 User를 가져온다.
     const userId = client?.handshake?.userid; // <- 이 부분은 client인자에서 파이프를 통해 한번 걸러서 가져오는게 좋을 것 같아.
-    const user = await this.userService.findUserById(userId);
+    const user = await this.userService.findUserByID(userId);
     if (user === null) return `Error: 알수없는 유저입니다.`;
     // User를 Friend로 추가한 유저들의 리스트를 가져온다
     // 유저리스트의 각 유저들의 socketid를 넣어준다.

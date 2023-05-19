@@ -41,9 +41,11 @@ import {
 export default class EventsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(private readonly matchhistoryService: MatchhistoryService,
+  constructor(
+    private readonly matchhistoryService: MatchhistoryService,
     private readonly userService: UserService,
-    private readonly userstatusService: UserstatusService) {}
+    private readonly userstatusService: UserstatusService,
+  ) {}
   @WebSocketServer()
   server: Server;
 
@@ -209,12 +211,11 @@ export default class EventsGateway
         const winUser = await this.userService.findUser(winIntraId);
         const loseUser = await this.userService.findUser(loseIntraId);
 
-        console.log("win user ", winUser);
-        console.log("lose user ", loseUser);
-
+        console.log('win user ', winUser);
+        console.log('lose user ', loseUser);
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
-        console.log("ExitStatus.GRACEFUL_SHUTDOWN");
+        console.log('ExitStatus.GRACEFUL_SHUTDOWN');
         console.log(
           ExitStatus.GRACEFUL_SHUTDOWN,
           gameType,
@@ -224,7 +225,8 @@ export default class EventsGateway
           loseUser.id,
         );
 
-        await this.matchhistoryService.createMatchHistory( ExitStatus.GRACEFUL_SHUTDOWN,
+        await this.matchhistoryService.createMatchHistory(
+          ExitStatus.GRACEFUL_SHUTDOWN,
           gameType,
           winScore,
           loseScore,
@@ -258,7 +260,9 @@ export default class EventsGateway
     const userId = client.handshake.headers.userid;
 
     // if connected, print socketid #debug code
-    console.log(`Client connected!!! your socketid is: ${client.id}, myintraId:${intraId}, userId:${userId}`);
+    console.log(
+      `Client connected!!! your socketid is: ${client.id}, myintraId:${intraId}, userId:${userId}`,
+    );
 
     // change user'status online Need Emit code
     // Todo. 이거필요함?
@@ -274,8 +278,8 @@ export default class EventsGateway
       client?.handshake?.headers?.userid,
       10,
     );
-    console.log('[GAME]client?.handshake:', client?.handshake)
-    console.log('[GAME]socketUserId:', socketUserId)
+    console.log('[GAME]client?.handshake:', client?.handshake);
+    console.log('[GAME]socketUserId:', socketUserId);
 
     // queue 지우자.
     for (var i = 0; i < this.matchNormalQueue.length; i++) {
@@ -294,8 +298,8 @@ export default class EventsGateway
       }
     }
 
-    const clientUser = await this.userService.findUserById(socketUserId);
-    console.log('[GAME]handleDisconnect: ',clientUser);
+    const clientUser = await this.userService.findUserByID(socketUserId);
+    console.log('[GAME]handleDisconnect: ', clientUser);
 
     // change client status
     this.userstatusService.setUserStatus(clientUser.id, 'offline');
@@ -329,7 +333,7 @@ export default class EventsGateway
             message: 'Disconnect 2p Win',
             dataObject: { player: winner.intraId },
           };
-					console.log('gameObject : ', gameObject);
+          console.log('gameObject : ', gameObject);
           this.server.to(roomName).emit('gameover', responseMessage);
         }
         // player 1p win
@@ -347,7 +351,7 @@ export default class EventsGateway
             message: 'Disconnect 1p Win',
             dataObject: { player: winner.intraId },
           };
-					console.log('gameObject : ', gameObject);
+          console.log('gameObject : ', gameObject);
           this.server.to(roomName).emit('gameover', responseMessage);
         }
 
@@ -387,7 +391,8 @@ export default class EventsGateway
         console.log(`winUser : ${winUser} ${winUser.id}`);
         console.log(`loseUser : ${loseUser} ${loseUser.id}`);
 
-        await this.matchhistoryService.createMatchHistory( ExitStatus.CRASH,
+        await this.matchhistoryService.createMatchHistory(
+          ExitStatus.CRASH,
           gameObject.type.flag,
           winScore,
           loseScore,
@@ -401,7 +406,7 @@ export default class EventsGateway
     } else {
       console.log('[GAME]user not online');
     }
-    
+
     this.userService.deleteSession(clientUser.intraid);
     // const intraId = loseUser;
     // delete this.sessionMap[intraId]; // TODO 연결이 끊어질때 나의 닉네임을 보낼 수  있음?
@@ -412,8 +417,7 @@ export default class EventsGateway
   async handleKeyPressUp(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
     console.log(roomName, id);
-    if (this.gameRoom[roomName] !== undefined)
-    {
+    if (this.gameRoom[roomName] !== undefined) {
       if (id === 1) {
         this.gameRoom[roomName].left.state = 1;
       } else if (id === 2) {
@@ -424,11 +428,10 @@ export default class EventsGateway
 
   // press Down key
   @SubscribeMessage('handleKeyPressDown')
-  async handleKeyPressDown( @MessageBody() message) {
+  async handleKeyPressDown(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
     console.log(roomName, id);
-    if (this.gameRoom[roomName] !== undefined)
-    {
+    if (this.gameRoom[roomName] !== undefined) {
       if (id === 1) {
         this.gameRoom[roomName].left.state = 2;
       } else if (id === 2) {
@@ -441,8 +444,7 @@ export default class EventsGateway
   @SubscribeMessage('handleKeyRelUp')
   async handleKeyRelUp(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
-    if (this.gameRoom[roomName] !== undefined)
-    {
+    if (this.gameRoom[roomName] !== undefined) {
       if (id === 1) {
         this.gameRoom[roomName].left.state = 0;
       } else if (id === 2) {
@@ -456,8 +458,7 @@ export default class EventsGateway
   async handleKeyRelDown(@MessageBody() message) {
     const { roomName, id }: { roomName: string; id: number } = message;
     console.log(roomName, id);
-    if (this.gameRoom[roomName] !== undefined)
-    {
+    if (this.gameRoom[roomName] !== undefined) {
       if (id === 1) {
         this.gameRoom[roomName].left.state = 0;
       } else if (id === 2) {
@@ -470,7 +471,11 @@ export default class EventsGateway
   @SubscribeMessage('match')
   async enqueueMatch(@ConnectedSocket() client: Socket, @MessageBody() data) {
     // parameter {gametype, intraId}
-    const { gameType, intraId, userId }: { gameType: MapStatus; intraId: string, userId:number } = data;
+    const {
+      gameType,
+      intraId,
+      userId,
+    }: { gameType: MapStatus; intraId: string; userId: number } = data;
     console.log('my:nick', intraId, userId);
 
     // ############ Error logic ############
@@ -556,8 +561,8 @@ export default class EventsGateway
           // leftPlayerNick: left.intraId,
           // rightPlayerNick: right.intraId,
 
-          leftSockId:left.socket.id,
-          rightSockId:right.socket.id,
+          leftSockId: left.socket.id,
+          rightSockId: right.socket.id,
           roomName: roomName,
           gameType: gameType,
         },
@@ -602,11 +607,11 @@ export default class EventsGateway
   // cancel queue event
   // param[socketId]
   @SubscribeMessage('cancel queue')
-  async cancelQueue(@ConnectedSocket() client, @MessageBody() message)  {
-    const {intraId} = message;
+  async cancelQueue(@ConnectedSocket() client, @MessageBody() message) {
+    const { intraId } = message;
 
     // check 용도
-    let isInQueueFlag: boolean = false;
+    let isInQueueFlag = false;
 
     // travel normal queue
     for (var i = 0; i < this.matchNormalQueue.length; i++) {
@@ -628,19 +633,21 @@ export default class EventsGateway
     }
 
     // call back 용 response message
-    const responseMessage = {state: 0, message: ""};
+    const responseMessage = { state: 0, message: '' };
 
     // Creating Messages Based on Results
-    if (isInQueueFlag) {  // found in server Queue(normal or extend)
+    if (isInQueueFlag) {
+      // found in server Queue(normal or extend)
       // success
       responseMessage.state = 200;
       responseMessage.message = `client socket id ${client.id}가 발견되었습니다.`;
 
       // change user'status online Need Emit code
       const user = await this.userService.findUser(intraId);
-      console.log("여긴가", user.id);
+      console.log('여긴가', user.id);
       this.userstatusService.setUserStatus(user.id, 'online');
-    } else {              // not found Error
+    } else {
+      // not found Error
       // fail
       responseMessage.state = 404;
       responseMessage.message = `client socket id ${client.id}가 발견되지못했습니다. 문제를 해결하십시요. 휴먼`;
@@ -652,12 +659,16 @@ export default class EventsGateway
   private sessionMap = {};
   @SubscribeMessage('Invite Game')
   async InviteGame(@ConnectedSocket() client, @MessageBody() data) {
-    const {myIntraId, oppIntraId, gameType }: { myIntraId: string, oppIntraId: string, gameType: number } = data;
+    const {
+      myIntraId,
+      oppIntraId,
+      gameType,
+    }: { myIntraId: string; oppIntraId: string; gameType: number } = data;
 
     // 1. Check if your opponent is online or offline
     const socketData = this.sessionMap[oppIntraId];
     if (socketData === undefined) {
-      const responseMessage = {state: 404, message: "offline인 친구임. ㅅㄱ"};
+      const responseMessage = { state: 404, message: 'offline인 친구임. ㅅㄱ' };
       return responseMessage;
     }
 
@@ -665,26 +676,28 @@ export default class EventsGateway
     const oppUser = await this.userService.findUser(oppIntraId);
     this.userstatusService.setUserStatus(oppUser.id, 'online');
     if (this.userstatusService.getUserStatus(oppUser.id) !== 'online') {
-      const responseMessage = {state: 404, message: "game중인 친구임. ㅅㄱ"};
+      const responseMessage = { state: 404, message: 'game중인 친구임. ㅅㄱ' };
       return responseMessage;
     }
 
     // 3. return invite complete event
     const user = await this.userService.findUser(myIntraId);
     console.log(user);
-    this.server.to(socketData.id).emit('invite message', {user:user, gameType});
-    const responseMessage = {state: 200, message: "초대 성공하였음."};
+    this.server
+      .to(socketData.id)
+      .emit('invite message', { user: user, gameType });
+    const responseMessage = { state: 200, message: '초대 성공하였음.' };
     return responseMessage;
   }
 
   @SubscribeMessage('Accept invitation')
   async InviteOK(@ConnectedSocket() client, @MessageBody() data) {
-    const { myIntraId, oppintraId,  gameType } = data;
+    const { myIntraId, oppintraId, gameType } = data;
 
-    console.log("my data:", data);
-    console.log("my IntraId:", myIntraId);
-    console.log("opp IntraId:", oppintraId);
-    console.log("gametype:", gameType);
+    console.log('my data:', data);
+    console.log('my IntraId:', myIntraId);
+    console.log('opp IntraId:', oppintraId);
+    console.log('gametype:', gameType);
 
     // 1. Check if your opponent is online or offline
     const socketData = this.sessionMap[oppintraId];
@@ -750,8 +763,8 @@ export default class EventsGateway
       dataObject: {
         leftUser,
         rightUser,
-        leftSockId:client.id,
-        rightSockId:this.sessionMap[rightUser.intraid].id,
+        leftSockId: client.id,
+        rightSockId: this.sessionMap[rightUser.intraid].id,
         roomName: roomName,
         gameType: gameType,
       },
@@ -767,15 +780,18 @@ export default class EventsGateway
     this.server.to(client.id).emit('invite complete');
   }
 
-  @SubscribeMessage('playerBackspace')// TODO
+  @SubscribeMessage('playerBackspace') // TODO
   async BackClick(@ConnectedSocket() client, @MessageBody() data) {
     const { roomName, nickName } = data;
-		
+
     const gameObject = this.gameRoom[roomName];
-		console.log('playerBackSpace GameObject : ', gameObject);
+    console.log('playerBackSpace GameObject : ', gameObject);
     // 1p or 2p case
-    if (nickName === gameObject.left.intraId || nickName === gameObject.right.intraId) {
-			console.log('backspace 첫 조건문');
+    if (
+      nickName === gameObject.left.intraId ||
+      nickName === gameObject.right.intraId
+    ) {
+      console.log('backspace 첫 조건문');
       clearInterval(this.intervalIds[roomName]);
       delete this.intervalIds[roomName];
 
@@ -788,9 +804,13 @@ export default class EventsGateway
       const gameType: number = gameObject.type.flag;
 
       const winner: PlayerObject =
-			gameObject.left.intraId !== nickName ? gameObject.left : gameObject.right;
+        gameObject.left.intraId !== nickName
+          ? gameObject.left
+          : gameObject.right;
       const loser: PlayerObject =
-			gameObject.left.intraId === nickName ? gameObject.left : gameObject.right;
+        gameObject.left.intraId === nickName
+          ? gameObject.left
+          : gameObject.right;
       const winScore: number = winner.score;
       const loseScore: number = loser.score;
       const winintraId: string = winner.intraId;
@@ -799,7 +819,14 @@ export default class EventsGateway
       const winUser = await this.userService.findUser(winintraId);
       const loseUser = await this.userService.findUser(loserintraId);
 
-      console.log(ExitStatus.CRASH, gameObject.type.flag, winScore, loseScore, winintraId, loserintraId);
+      console.log(
+        ExitStatus.CRASH,
+        gameObject.type.flag,
+        winScore,
+        loseScore,
+        winintraId,
+        loserintraId,
+      );
 
       await this.matchhistoryService.createMatchHistory(
         ExitStatus.CRASH,
@@ -812,14 +839,14 @@ export default class EventsGateway
 
       // 상태 바꾸기
       this.userstatusService.setUserStatus(loseUser.id, 'online');
-      this.server.to(client.id).emit('clickbackspace', {userId:loseUser.id});
+      this.server.to(client.id).emit('clickbackspace', { userId: loseUser.id });
 
       const responseMessage = {
         state: 200,
         message: 'playerBackspace으로 인해서 실행된 메시지입니다.',
         dataObject: { player: winner.intraId },
       };
-      console.log("response Message", responseMessage);
+      console.log('response Message', responseMessage);
       this.server.to(roomName).emit('gameover', responseMessage);
       delete this.gameRoom[roomName];
       this.server.socketsLeave(roomName);
