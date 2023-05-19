@@ -414,7 +414,7 @@ export default class EventsGateway
 
     this.userService.deleteSession(clientUser.intraid);
     // const intraId = loseUser;
-    // delete this.sessionMap[intraId]; // TODO 연결이 끊어질때 나의 닉네임을 보낼 수  있음?
+    delete this.sessionMap[clientUser.intraid]; // TODO 연결이 끊어질때 나의 닉네임을 보낼 수  있음?
   }
 
   // press Up key

@@ -43,9 +43,10 @@ export class OtpController {
 
     //세션 키 생성 및 저장
     const sessionData = this.userService.createSession(intraID);
-    const userData = this.userService.findUser(intraID);
+    const userData = await this.userService.findUser(intraID);
 
     //쿠키 값 전달
+    console.log("user" + JSON.stringify(userData));
     res.cookie('session_key', sessionData.key);
     res.cookie('userData', JSON.stringify(userData));
 
