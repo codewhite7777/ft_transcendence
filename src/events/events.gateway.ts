@@ -694,22 +694,25 @@ export default class EventsGateway
       return;
     }
 
+    const oppUser = await this.userService.findUser(oppintraId);
+
     // 2. Check if your opponent is playing or spectating
-    if (socketData.state === 'in-game' || socketData.state === 'in-queue') {
+    if (this.userstatusService.getUserStatus(oppUser.id) !== 'in-game' || this.userstatusService.getUserStatus(oppUser.id) !== 'in-queue')  {
+      //socketData.state === 'in-game' || socketData.state === 'in-queue')
       // TODO state change
       this.server.to(client.id).emit('invite fail');
       return;
     }
     // 3. return invite complete event
     // 3-1. remove my data in WaitingQueue
-    if (socketData.state === 'in-queue') {
+    if (this.userstatusService.getUserStatus(oppUser.id) !== 'in-queue') {
       for (var i = 0; i < this.matchNormalQueue.length; i++) {
         if (this.matchNormalQueue[i].socket.nickName === oppintraId) {
           this.matchNormalQueue.splice(i, 1);
           break;
         }
       }
-      for (var i = 0; i < this.matchNormalQueue.length; i++) {
+      for (var i = 0; i < this.matchExtendQueue.length; i++) { // TODO
         if (this.matchExtendQueue[i].socket.nickName === oppintraId) {
           this.matchExtendQueue.splice(i, 1);
           break;
