@@ -140,7 +140,7 @@ export default class EventsGateway
           direction * gameObject.ball.speed * Math.cos(angleRad);
         gameObject.ball.velocityY = gameObject.ball.speed * Math.sin(angleRad);
 
-        gameObject.ball.speed += 0.1;
+        gameObject.ball.speed += 0.5;
       }
 
       // update player left paddle
