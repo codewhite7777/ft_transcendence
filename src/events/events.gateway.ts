@@ -112,8 +112,8 @@ export default class EventsGateway
       ball.speed = 5;
 
       // reverse the original direction
-      ball.velocityX = -ball.velocityX / Math.abs(ball.velocityX);
-      ball.velocityY = -ball.velocityY / Math.abs(ball.velocityY);
+      ball.velocityX = -ball.velocityX / Math.abs(ball.velocityX) * ball.speed;
+      ball.velocityY = -ball.velocityY / Math.abs(ball.velocityY) * ball.speed;
     }
 
     const setId = setInterval(async () => {
@@ -140,8 +140,10 @@ export default class EventsGateway
         gameObject.ball.velocityX =
           direction * gameObject.ball.speed * Math.cos(angleRad);
         gameObject.ball.velocityY = gameObject.ball.speed * Math.sin(angleRad);
-
-        gameObject.ball.speed += 0.5;
+        if (gameObject.ball.speed < 15) {
+          gameObject.ball.speed += 0.5;
+          //console.log(gameObject.ball.speed);
+        }
       }
 
       // update player left paddle
@@ -212,11 +214,11 @@ export default class EventsGateway
         const winUser = await this.userService.findUser(winIntraId);
         const loseUser = await this.userService.findUser(loseIntraId);
 
-        console.log('win user ', winUser);
-        console.log('lose user ', loseUser);
+        // console.log('win user ', winUser);
+        // console.log('lose user ', loseUser);
 
         // console.log("state: graceful exit", "mapNumber:", gameType, winScore, loseScore, "id:", winId, loserId);
-        console.log('ExitStatus.GRACEFUL_SHUTDOWN');
+        //console.log('ExitStatus.GRACEFUL_SHUTDOWN');
         console.log(
           ExitStatus.GRACEFUL_SHUTDOWN,
           gameType,
@@ -234,7 +236,7 @@ export default class EventsGateway
           winUser.id,
           loseUser.id,
         );
-        console.log('데이터 저장 완료');
+        //console.log('데이터 저장 완료');
 
         // Todo. 이거 필요함??
         // change user'status online Need Emit code

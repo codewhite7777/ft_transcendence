@@ -52,7 +52,7 @@ return {flag};
 export function createLeftPlayerObject({
   x = 0,
   y = canvasH / 2 - 100 / 2,
-  width = 10,
+  width = 15,
   height = 100,
   score = 0,
   state = 0,
@@ -62,9 +62,9 @@ return { x, y, width, height, score, state, intraId };
 }
 
 export function createRightPlayerObject({
-  x = canvasW - 10,
+  x = canvasW - 15,
   y = canvasH / 2 - 100 / 2,
-  width = 10,
+  width = 15,
   height = 100,
   score = 0,
   state = 0,
@@ -78,8 +78,8 @@ export function createBallObject(
   y = canvasH / 2,
   radius = 10,
   speed = 5,
-  velocityX = 5,
-  velocityY = 5,
+  velocityX = 2.5,
+  velocityY = 2.5,
   ): BallObject {
 return { x, y, radius, speed, velocityX, velocityY };
 }
