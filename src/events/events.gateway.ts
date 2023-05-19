@@ -112,7 +112,8 @@ export default class EventsGateway
       ball.speed = 5;
 
       // reverse the original direction
-      ball.velocityX = -ball.velocityX;
+      ball.velocityX = -ball.velocityX / Math.abs(ball.velocityX);
+      ball.velocityY = -ball.velocityY / Math.abs(ball.velocityY);
     }
 
     const setId = setInterval(async () => {
